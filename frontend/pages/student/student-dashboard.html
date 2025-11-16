@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Dashboard - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <h1 class="text-xl mr-2 font-bold text-cyan-600">AttendEase</h1>
+            <span class="ml-4 text-sm text-gray-500">Student Portal</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <p id="user-name" class="text-sm font-semibold text-gray-900"></p>
+              <p id="user-role" class="text-xs text-gray-500"></p>
+            </div>
+            <button
+              onclick="logout()"
+              class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Welcome Header -->
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2" id="welcome-message">
+          Welcome back!
+        </h2>
+        <p class="text-gray-600">
+          View your enrolled subjects and attendance records
+        </p>
+      </div>
+
+      <!-- Student Profile Card -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Profile</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p class="text-sm text-gray-500">PRN</p>
+            <p id="profile-prn" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">SRN</p>
+            <p id="profile-srn" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Branch</p>
+            <p id="profile-branch" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Semester</p>
+            <p id="profile-semester" class="font-semibold text-gray-900"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrolled Subjects -->
+      <div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">
+          Enrolled Subjects
+        </h3>
+        <div
+          id="subjects-container"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <!-- Subjects will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let currentUser = null;
+
+      // Initialize page
+      document.addEventListener('DOMContentLoaded', async () => {
+        currentUser = await checkAuth();
+        if (currentUser) {
+          checkRole(currentUser, ['student', 'admin']);
+          initializePage();
+        }
+      });
+
+      async function initializePage() {
+        // Set user info in header
+        document.getElementById('user-name').textContent =
+          currentUser.profile.name;
+        document.getElementById('user-role').textContent =
+          currentUser.role.toUpperCase();
+
+        // Set profile data
+        document.getElementById('welcome-message').textContent =
+          `Welcome back, ${currentUser.profile.name}!`;
+        document.getElementById('profile-prn').textContent =
+          currentUser.profile.prn;
+        document.getElementById('profile-srn').textContent =
+          currentUser.profile.srn;
+        document.getElementById('profile-branch').textContent =
+          currentUser.profile.branch;
+        document.getElementById('profile-semester').textContent =
+          `Semester ${currentUser.profile.semester}`;
+
+        // Load dashboard data
+        await loadDashboard();
+      }
+
+      async function loadDashboard() {
+        showLoading();
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/students/attendance/dashboard`
+          );
+
+          hideLoading();
+
+          const student = data.data.student;
+          const container = document.getElementById('subjects-container');
+
+          if (student.enrolledSubjects.length === 0) {
+            handleEmptyState(
+              container,
+              'No enrolled subjects found',
+              '<p class="text-sm text-gray-500 mt-2">Please contact your administrator to enroll in subjects.</p>'
+            );
+            return;
+          }
+
+          container.innerHTML = student.enrolledSubjects
+            .map(
+              (subject) => `
+            <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition p-6 border-l-4 border-cyan-500">
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h4 class="text-lg font-bold text-gray-900 mb-1">
+                    ${subject.subjectCode}
+                  </h4>
+                  <p class="text-gray-600">${subject.subjectName}</p>
+                </div>
+                <span class="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-xs font-semibold">
+                  ${subject.credits} Credits
+                </span>
+              </div>
+              <div class="text-sm text-gray-500 mb-4">
+                <p>Semester: ${subject.semesterNumber}</p>
+              </div>
+              
+                href="/pages/student/student-attendance.html?subjectId=${subject.subjectId}"
+                class="block w-full text-center bg-cyan-600 text-white py-2 rounded-lg hover:bg-cyan-700 transition font-medium"
+              >
+                View Attendance
+              </a>
+            </div>
+          `
+            )
+            .join('');
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+    </script>
+  </body>
+</html>

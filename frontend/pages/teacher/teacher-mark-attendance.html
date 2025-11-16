@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mark Attendance - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      id="confirm-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-96 overflow-y-auto"
+      >
+        <h3 class="text-xl font-bold mb-4">Confirm Attendance Submission</h3>
+        <div id="absent-students-list" class="mb-6"></div>
+        <div class="flex gap-3 justify-end">
+          <button
+            id="confirm-cancel"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+          <button
+            id="confirm-action"
+            class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition"
+          >
+            Confirm Submit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            
+              href="/pages/teacher/teacher-dashboard.html"
+              class="text-gray-600 hover:text-cyan-600 transition"
+              >← Back</a
+            >
+            <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+            <span class="text-sm text-gray-500">Mark Attendance</span>
+          </div>
+          <button
+            onclick="logout()"
+            class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <form id="attendance-form" class="space-y-6">
+        <!-- Class Selection -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold mb-4">Select Class</h3>
+          <select
+            id="class-select"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+          >
+            <option value="">Loading classes...</option>
+          </select>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold mb-4">Date & Time</h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Date <span class="text-red-500">*</span></label
+              >
+              <input
+                type="date"
+                id="attendance-date"
+                required
+                max=""
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Start Time <span class="text-red-500">*</span></label
+              >
+              <input
+                type="time"
+                id="start-time"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >End Time <span class="text-red-500">*</span></label
+              >
+              <input
+                type="time"
+                id="end-time"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Sessions <span class="text-red-500">*</span></label
+              >
+              <input
+                type="number"
+                id="num-sessions"
+                required
+                min="1"
+                max="10"
+                value="2"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+              <p class="text-xs text-gray-500 mt-1">1-10 sessions</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Students Table -->
+        <div
+          class="bg-white rounded-lg shadow-md"
+          id="students-section"
+          style="display: none"
+        >
+          <div class="p-6 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h3 class="text-lg font-semibold">Mark Attendance</h3>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onclick="markAll(true)"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition"
+              >
+                Mark All Present
+              </button>
+              <button
+                type="button"
+                onclick="markAll(false)"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium transition"
+              >
+                Mark All Absent
+              </button>
+            </div>
+          </div>
+          <div class="p-6">
+            <div class="mb-4">
+              <input
+                type="text"
+                id="student-search"
+                placeholder="Search by name, PRN, or SRN..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div id="students-container" class="space-y-4"></div>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex justify-end gap-4">
+          <button
+            type="button"
+            onclick="window.location.href='/pages/teacher/teacher-dashboard.html'"
+            class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium"
+          >
+            Submit Attendance
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let classes = [];
+      let students = [];
+      let filteredStudents = [];
+      let numSessions = 2;
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (user) {
+          checkRole(user, ['teacher', 'admin']);
+          await loadClasses();
+          setupEventListeners();
+
+          // Set max date to today
+          const today = new Date().toISOString().split('T')[0];
+          document.getElementById('attendance-date').max = today;
+        }
+      });
+
+      function setupEventListeners() {
+        document
+          .getElementById('class-select')
+          .addEventListener('change', handleClassChange);
+        document
+          .getElementById('num-sessions')
+          .addEventListener('change', handleSessionsChange);
+        document
+          .getElementById('student-search')
+          .addEventListener('input', debounce(handleSearch, 300));
+        document
+          .getElementById('attendance-form')
+          .addEventListener('submit', handleSubmit);
+      }
+
+      async function loadClasses() {
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/classes`
+          );
+          classes = data.data.assignedClasses;
+
+          const select = document.getElementById('class-select');
+          select.innerHTML =
+            '<option value="">Select a class...</option>' +
+            classes
+              .map(
+                (cls) =>
+                  `<option value="${cls.classSectionId}">${cls.subject.subjectCode} - ${cls.branch} Sem${cls.semester} Sec${cls.sectionName}</option>`
+              )
+              .join('');
+        } catch (error) {
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      async function handleClassChange(e) {
+        const classSectionId = e.target.value;
+        if (!classSectionId) {
+          document.getElementById('students-section').style.display = 'none';
+          return;
+        }
+
+        showLoading();
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/class-students/${classSectionId}`
+          );
+          students = data.data.students;
+          filteredStudents = [...students];
+          hideLoading();
+
+          document.getElementById('students-section').style.display = 'block';
+          renderStudents();
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      function handleSessionsChange(e) {
+        numSessions = parseInt(e.target.value);
+        if (students.length > 0) {
+          renderStudents();
+        }
+      }
+
+      function handleSearch(e) {
+        const query = e.target.value.toLowerCase();
+        filteredStudents = students.filter(
+          (s) =>
+            s.name.toLowerCase().includes(query) ||
+            s.prn.toLowerCase().includes(query) ||
+            s.srn.toLowerCase().includes(query)
+        );
+        renderStudents();
+      }
+
+      function renderStudents() {
+        const container = document.getElementById('students-container');
+        container.innerHTML = filteredStudents
+          .map(
+            (student) => `
+          <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900">${student.name}</p>
+                <p class="text-sm text-gray-500">${student.prn} | ${student.srn}</p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  onclick="markStudentAll('${student.studentId}', true)"
+                  class="px-3 py-1 bg-green-100 text-green-800 rounded text-sm hover:bg-green-200 transition font-medium"
+                >
+                  All Present
+                </button>
+                <button
+                  type="button"
+                  onclick="markStudentAll('${student.studentId}', false)"
+                  class="px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition font-medium"
+                >
+                  All Absent
+                </button>
+              </div>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              ${Array.from({ length: numSessions }, (_, i) => i + 1)
+                .map(
+                  (session) => `
+                <label class="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded cursor-pointer hover:bg-gray-50 transition">
+                  <input
+                    type="checkbox"
+                    class="session-checkbox w-4 h-4 text-cyan-600 rounded focus:ring-2 focus:ring-cyan-500"
+                    data-student="${student.studentId}"
+                    data-session="${session}"
+                    checked
+                  />
+                  <span class="text-sm font-medium">Session ${session}</span>
+                </label>
+              `
+                )
+                .join('')}
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      function markAll(present) {
+        document.querySelectorAll('.session-checkbox').forEach((cb) => {
+          cb.checked = present;
+        });
+      }
+
+      function markStudentAll(studentId, present) {
+        document
+          .querySelectorAll(`[data-student="${studentId}"]`)
+          .forEach((cb) => {
+            cb.checked = present;
+          });
+      }
+
+      function handleSubmit(e) {
+        e.preventDefault();
+
+        const classSectionId = document.getElementById('class-select').value;
+        const date = document.getElementById('attendance-date').value;
+        const startTime = document.getElementById('start-time').value;
+        const endTime = document.getElementById('end-time').value;
+
+        if (!classSectionId || !date || !startTime || !endTime) {
+          showWarningToast('Please fill all required fields');
+          return;
+        }
+
+        // Validate times
+        if (startTime >= endTime) {
+          showWarningToast('End time must be after start time');
+          return;
+        }
+
+        // Collect attendance data
+        const attendance = students.map((student) => {
+          const sessions = [];
+          for (let i = 1; i <= numSessions; i++) {
+            const checkbox = document.querySelector(
+              `[data-student="${student.studentId}"][data-session="${i}"]`
+            );
+            sessions.push({
+              sessionNumber: i,
+              status: checkbox && checkbox.checked ? 'present' : 'absent',
+            });
+          }
+          return { studentId: student.studentId, sessions };
+        });
+
+        // Find absent students
+        const absentList = [];
+        students.forEach((student) => {
+          const absentSessions = [];
+          for (let i = 1; i <= numSessions; i++) {
+            const checkbox = document.querySelector(
+              `[data-student="${student.studentId}"][data-session="${i}"]`
+            );
+            if (!checkbox || !checkbox.checked) {
+              absentSessions.push(i);
+            }
+          }
+          if (absentSessions.length > 0) {
+            absentList.push({
+              name: student.name,
+              srn: student.srn,
+              sessions: absentSessions,
+            });
+          }
+        });
+
+        // Show confirmation modal
+        const absentStudentsHtml =
+          absentList.length > 0
+            ? `<div class="mb-4">
+                 <p class="font-medium text-red-600 mb-2">Students marked absent in one or more sessions:</p>
+                 <div class="space-y-2 max-h-48 overflow-y-auto">
+                   ${absentList
+                     .map(
+                       (s) => `
+                     <div class="p-2 bg-red-50 rounded">
+                       <p class="font-medium">${s.name} (${s.srn})</p>
+                       <p class="text-sm text-gray-600">Absent in session(s): ${s.sessions.join(', ')}</p>
+                     </div>
+                   `
+                     )
+                     .join('')}
+                 </div>
+               </div>`
+            : '<p class="text-green-600 font-medium mb-4">All students marked present in all sessions!</p>';
+
+        document.getElementById('absent-students-list').innerHTML =
+          absentStudentsHtml +
+          '<p class="text-sm text-gray-600">Click Confirm to submit the attendance.</p>';
+
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('hidden');
+
+        document.getElementById('confirm-cancel').onclick = () =>
+          modal.classList.add('hidden');
+        document.getElementById('confirm-action').onclick = () =>
+          submitAttendance(classSectionId, date, startTime, endTime, attendance);
+      }
+
+      async function submitAttendance(
+        classSectionId,
+        date,
+        startTime,
+        endTime,
+        attendance
+      ) {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        showLoading();
+
+        try {
+          const formattedDate = formatDateFromInput(date);
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/attendance`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                classSectionId,
+                date: formattedDate,
+                startTime,
+                endTime,
+                numSessions,
+                attendance,
+              }),
+            }
+          );
+
+          hideLoading();
+          showSuccessToast('Attendance marked successfully!');
+
+          setTimeout(() => {
+            window.location.href = '/pages/teacher/teacher-dashboard.html';
+          }, 2000);
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+    </script>
+  </body>
+</html>

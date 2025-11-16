@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Dashboard - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+            <span class="ml-4 text-sm text-gray-500">Teacher Portal</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <p id="user-name" class="text-sm font-semibold text-gray-900"></p>
+              <p id="user-role" class="text-xs text-gray-500"></p>
+            </div>
+            <button
+              onclick="logout()"
+              class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Welcome Header -->
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2" id="welcome-message">
+          Welcome back!
+        </h2>
+        <p class="text-gray-600">
+          Manage attendance for your assigned classes
+        </p>
+      </div>
+
+      <!-- Teacher Profile Card -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Profile</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p class="text-sm text-gray-500">Teacher ID</p>
+            <p
+              id="profile-teacher-id"
+              class="font-semibold text-gray-900"
+            ></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Name</p>
+            <p id="profile-name" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Department</p>
+            <p id="profile-department" class="font-semibold text-gray-900"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 mb-1">Total Classes</p>
+              <p id="total-classes" class="text-3xl font-bold text-gray-900">
+                0
+              </p>
+            </div>
+            <div class="p-3 bg-cyan-100 rounded-lg">
+              <svg
+                class="w-8 h-8 text-cyan-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 mb-1">Total Students</p>
+              <p id="total-students" class="text-3xl font-bold text-gray-900">
+                0
+              </p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-lg">
+              <svg
+                class="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 mb-1">Departments</p>
+              <p id="total-departments" class="text-3xl font-bold text-gray-900">
+                1
+              </p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-lg">
+              <svg
+                class="w-8 h-8 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assigned Classes -->
+      <div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">Assigned Classes</h3>
+        <div
+          id="classes-container"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <!-- Classes will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let currentUser = null;
+
+      // Initialize page
+      document.addEventListener('DOMContentLoaded', async () => {
+        currentUser = await checkAuth();
+        if (currentUser) {
+          checkRole(currentUser, ['teacher', 'admin']);
+          initializePage();
+        }
+      });
+
+      async function initializePage() {
+        // Set user info in header
+        document.getElementById('user-name').textContent =
+          currentUser.profile.name;
+        document.getElementById('user-role').textContent =
+          currentUser.role.toUpperCase();
+
+        // Set profile data
+        document.getElementById('welcome-message').textContent =
+          `Welcome back, ${currentUser.profile.name}!`;
+        document.getElementById('profile-teacher-id').textContent =
+          currentUser.profile.teacherId;
+        document.getElementById('profile-name').textContent =
+          currentUser.profile.name;
+        document.getElementById('profile-department').textContent =
+          currentUser.profile.department;
+
+        // Load classes
+        await loadClasses();
+      }
+
+      async function loadClasses() {
+        showLoading();
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/classes`
+          );
+
+          hideLoading();
+
+          const classes = data.data.assignedClasses;
+          const container = document.getElementById('classes-container');
+
+          // Update statistics
+          animateNumber(
+            document.getElementById('total-classes'),
+            data.data.totalClasses
+          );
+
+          // Calculate total students
+          const totalStudents = classes.reduce(
+            (sum, cls) => sum + cls.totalStudents,
+            0
+          );
+          animateNumber(
+            document.getElementById('total-students'),
+            totalStudents
+          );
+
+          if (classes.length === 0) {
+            handleEmptyState(
+              container,
+              'No classes assigned',
+              '<p class="text-sm text-gray-500 mt-2">Contact admin to get class assignments.</p>'
+            );
+            return;
+          }
+
+          container.innerHTML = classes
+            .map(
+              (cls) => `
+            <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition p-6 border-l-4 border-cyan-500">
+              <div class="mb-4">
+                <div class="flex items-start justify-between mb-2">
+                  <h4 class="text-lg font-bold text-gray-900">
+                    ${cls.subject.subjectCode}
+                  </h4>
+                  <span class="px-2 py-1 bg-cyan-100 text-cyan-800 rounded text-xs font-semibold">
+                    ${cls.subject.credits} Credits
+                  </span>
+                </div>
+                <p class="text-gray-600">${cls.subject.subjectName}</p>
+                <p class="text-sm text-gray-500 mt-2">
+                  ${cls.branch} - Sem ${cls.semester} - Sec ${cls.sectionName}
+                </p>
+                <p class="text-xs text-gray-400 mt-1">
+                  Academic Year: ${cls.academicYear}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2 text-sm text-gray-600 mb-4 pb-4 border-b">
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+                <span>${cls.totalStudents} Students</span>
+              </div>
+
+              <div class="space-y-2">
+                
+                  href="/pages/teacher/teacher-mark-attendance.html?classSectionId=${cls.classSectionId}"
+                  class="block w-full text-center bg-cyan-600 text-white py-2 rounded-lg hover:bg-cyan-700 transition font-medium"
+                >
+                  Mark Attendance
+                </a>
+                
+                  href="/pages/teacher/teacher-view-attendance.html?classSectionId=${cls.classSectionId}"
+                  class="block w-full text-center bg-white border-2 border-cyan-600 text-cyan-600 py-2 rounded-lg hover:bg-cyan-50 transition font-medium"
+                >
+                  View Attendance
+                </a>
+                
+                  href="/pages/teacher/teacher-class-students.html?classSectionId=${cls.classSectionId}"
+                  class="block w-full text-center bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition font-medium"
+                >
+                  View Students
+                </a>
+              </div>
+            </div>
+          `
+            )
+            .join('');
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+    </script>
+  </body>
+</html>

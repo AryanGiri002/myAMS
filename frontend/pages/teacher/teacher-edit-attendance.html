@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Attendance - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      id="confirm-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold mb-4">Confirm Changes</h3>
+        <p class="text-gray-700 mb-6" id="confirm-message"></p>
+        <div class="flex gap-3 justify-end">
+          <button
+            id="confirm-cancel"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+          <button
+            id="confirm-action"
+            class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            
+              href="/pages/teacher/teacher-view-attendance.html"
+              class="text-gray-600 hover:text-cyan-600 transition"
+              >← Back</a
+            >
+            <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+            <span class="text-sm text-gray-500">Edit Attendance</span>
+          </div>
+          <button
+            onclick="logout()"
+            class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Warning Banner (if finalized) -->
+      <div
+        id="finalized-warning"
+        class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-6"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg
+              class="h-5 w-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700 font-medium">
+              This attendance record is finalized and cannot be edited.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Record Details (Read-only) -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Record Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <p class="text-sm text-gray-500">Record ID</p>
+            <p id="record-id" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Subject</p>
+            <p id="subject-info" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Section</p>
+            <p id="section-info" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Date</p>
+            <p id="record-date" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Time</p>
+            <p id="record-time" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Sessions</p>
+            <p id="num-sessions" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Marked At</p>
+            <p id="marked-at" class="font-semibold text-gray-900"></p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Last Modified</p>
+            <p id="last-modified" class="font-semibold text-gray-900"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Form -->
+      <form id="edit-form" class="space-y-6">
+        <!-- Time Adjustment (Optional) -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold mb-4">Adjust Time (Optional)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Start Time</label
+              >
+              <input
+                type="time"
+                id="start-time"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >End Time</label
+              >
+              <input
+                type="time"
+                id="end-time"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            Leave unchanged if you don't want to modify the time
+          </p>
+        </div>
+
+        <!-- Student Attendance -->
+        <div class="bg-white rounded-lg shadow-md">
+          <div
+            class="p-6 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+          >
+            <h3 class="text-lg font-semibold">Edit Student Attendance</h3>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onclick="markAll(true)"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition"
+              >
+                Mark All Present
+              </button>
+              <button
+                type="button"
+                onclick="markAll(false)"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium transition"
+              >
+                Mark All Absent
+              </button>
+            </div>
+          </div>
+          <div class="p-6">
+            <div class="mb-4">
+              <input
+                type="text"
+                id="student-search"
+                placeholder="Search by name, PRN, or SRN..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div id="students-container" class="space-y-4"></div>
+          </div>
+        </div>
+
+        <!-- Finalize Option -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              id="finalize-checkbox"
+              class="mt-1 w-4 h-4 text-cyan-600 rounded focus:ring-2 focus:ring-cyan-500"
+            />
+            <div>
+              <p class="font-medium text-gray-900">Finalize this record</p>
+              <p class="text-sm text-gray-600">
+                Once finalized, this record cannot be edited again. Only finalize
+                after you're certain all data is correct.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end gap-4">
+          <button
+            type="button"
+            onclick="window.location.href='/pages/teacher/teacher-view-attendance.html'"
+            class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            id="save-button"
+            class="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium"
+          >
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let recordId = null;
+      let recordData = null;
+      let allStudents = [];
+      let filteredStudents = [];
+      let numSessions = 0;
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (user) {
+          checkRole(user, ['teacher', 'admin']);
+
+          const params = new URLSearchParams(window.location.search);
+          recordId = params.get('recordId');
+
+          if (!recordId) {
+            showErrorToast('Record ID not found');
+            setTimeout(
+              () =>
+                (window.location.href =
+                  '/pages/teacher/teacher-view-attendance.html'),
+              2000
+            );
+            return;
+          }
+
+          await loadAttendanceRecord();
+          setupEventListeners();
+        }
+      });
+
+      function setupEventListeners() {
+        document
+          .getElementById('student-search')
+          .addEventListener('input', debounce(handleSearch, 300));
+        document
+          .getElementById('edit-form')
+          .addEventListener('submit', handleSubmit);
+      }
+
+      async function loadAttendanceRecord() {
+        showLoading();
+        try {
+          // Get all records and find the specific one
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/attendance`
+          );
+
+          hideLoading();
+
+          // Find the record with matching recordId
+          recordData = data.data.records.find((r) => r.recordId === recordId);
+
+          if (!recordData) {
+            showErrorToast('Record not found');
+            setTimeout(
+              () =>
+                (window.location.href =
+                  '/pages/teacher/teacher-view-attendance.html'),
+              2000
+            );
+            return;
+          }
+
+          // Check if finalized
+          if (recordData.isFinalized) {
+            document.getElementById('finalized-warning').classList.remove('hidden');
+            document.getElementById('save-button').disabled = true;
+            document.getElementById('save-button').classList.add('opacity-50', 'cursor-not-allowed');
+            document.querySelectorAll('input, button[type="button"]').forEach(el => {
+              if (el.id !== 'student-search') el.disabled = true;
+            });
+          }
+
+          numSessions = recordData.numSessions;
+          allStudents = recordData.attendanceDetails.map((detail) => ({
+            studentId: detail.student._id,
+            name: detail.student.name,
+            prn: detail.student.prn,
+            srn: detail.student.srn,
+            sessions: detail.sessions,
+          }));
+          filteredStudents = [...allStudents];
+
+          // Populate record details
+          document.getElementById('record-id').textContent = recordData.recordId;
+          document.getElementById('subject-info').textContent =
+            `${recordData.subject.subjectCode} - ${recordData.subject.subjectName}`;
+          document.getElementById('section-info').textContent =
+            `${recordData.section.branch} Sem${recordData.section.semester} Sec${recordData.section.sectionName}`;
+          document.getElementById('record-date').textContent = recordData.date;
+          document.getElementById('record-time').textContent =
+            `${recordData.startTime} - ${recordData.endTime}`;
+          document.getElementById('num-sessions').textContent =
+            recordData.numSessions;
+          document.getElementById('marked-at').textContent = recordData.markedAt;
+          document.getElementById('last-modified').textContent =
+            recordData.lastModifiedAt || 'Never';
+
+          // Set time fields
+          document.getElementById('start-time').value = recordData.startTime;
+          document.getElementById('end-time').value = recordData.endTime;
+
+          // Render students
+          renderStudents();
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      function handleSearch(e) {
+        const query = e.target.value.toLowerCase();
+        filteredStudents = allStudents.filter(
+          (s) =>
+            s.name.toLowerCase().includes(query) ||
+            s.prn.toLowerCase().includes(query) ||
+            s.srn.toLowerCase().includes(query)
+        );
+        renderStudents();
+      }
+
+      function renderStudents() {
+        const container = document.getElementById('students-container');
+        container.innerHTML = filteredStudents
+          .map(
+            (student) => `
+          <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900">${student.name}</p>
+                <p class="text-sm text-gray-500">${student.prn} | ${student.srn}</p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  onclick="markStudentAll('${student.studentId}', true)"
+                  class="px-3 py-1 bg-green-100 text-green-800 rounded text-sm hover:bg-green-200 transition font-medium"
+                  ${recordData.isFinalized ? 'disabled' : ''}
+                >
+                  All Present
+                </button>
+                <button
+                  type="button"
+                  onclick="markStudentAll('${student.studentId}', false)"
+                  class="px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200 transition font-medium"
+                  ${recordData.isFinalized ? 'disabled' : ''}
+                >
+                  All Absent
+                </button>
+              </div>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              ${student.sessions
+                .map(
+                  (session) => `
+                <label class="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded cursor-pointer hover:bg-gray-50 transition">
+                  <input
+                    type="checkbox"
+                    class="session-checkbox w-4 h-4 text-cyan-600 rounded focus:ring-2 focus:ring-cyan-500"
+                    data-student="${student.studentId}"
+                    data-session="${session.sessionNumber}"
+                    ${session.status === 'present' ? 'checked' : ''}
+                    ${recordData.isFinalized ? 'disabled' : ''}
+                  />
+                  <span class="text-sm font-medium">Session ${session.sessionNumber}</span>
+                </label>
+              `
+                )
+                .join('')}
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      function markAll(present) {
+        if (recordData.isFinalized) return;
+        document.querySelectorAll('.session-checkbox').forEach((cb) => {
+          cb.checked = present;
+        });
+      }
+
+      function markStudentAll(studentId, present) {
+        if (recordData.isFinalized) return;
+        document
+          .querySelectorAll(`[data-student="${studentId}"]`)
+          .forEach((cb) => {
+            cb.checked = present;
+          });
+      }
+
+      function handleSubmit(e) {
+        e.preventDefault();
+
+        if (recordData.isFinalized) {
+          showErrorToast('Cannot edit a finalized record');
+          return;
+        }
+
+        const startTime = document.getElementById('start-time').value;
+        const endTime = document.getElementById('end-time').value;
+        const isFinalized = document.getElementById('finalize-checkbox').checked;
+
+        // Validate times
+        if (startTime && endTime && startTime >= endTime) {
+          showWarningToast('End time must be after start time');
+          return;
+        }
+
+        // Collect attendance data
+        const attendance = allStudents.map((student) => {
+          const sessions = [];
+          for (let i = 1; i <= numSessions; i++) {
+            const checkbox = document.querySelector(
+              `[data-student="${student.studentId}"][data-session="${i}"]`
+            );
+            sessions.push({
+              sessionNumber: i,
+              status: checkbox && checkbox.checked ? 'present' : 'absent',
+            });
+          }
+          return { studentId: student.studentId, sessions };
+        });
+
+        // Show confirmation
+        const message = isFinalized
+          ? 'Are you sure you want to save these changes and finalize this record? Once finalized, it cannot be edited again.'
+          : 'Are you sure you want to save these changes?';
+
+        showConfirmModal(
+          'Confirm Changes',
+          message,
+          () => saveChanges(startTime, endTime, attendance, isFinalized)
+        );
+      }
+
+      async function saveChanges(startTime, endTime, attendance, isFinalized) {
+        showLoading();
+
+        try {
+          const updateData = {
+            attendance,
+          };
+
+          // Only include time if changed
+          if (startTime !== recordData.startTime) {
+            updateData.startTime = startTime;
+          }
+          if (endTime !== recordData.endTime) {
+            updateData.endTime = endTime;
+          }
+
+          // Include finalize flag
+          if (isFinalized) {
+            updateData.isFinalized = true;
+          }
+
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/attendance/${recordId}`,
+            {
+              method: 'PATCH',
+              body: JSON.stringify(updateData),
+            }
+          );
+
+          hideLoading();
+          showSuccessToast(
+            isFinalized
+              ? 'Attendance updated and finalized successfully!'
+              : 'Attendance updated successfully!'
+          );
+
+          setTimeout(() => {
+            window.location.href = '/pages/teacher/teacher-view-attendance.html';
+          }, 2000);
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+    </script>
+  </body>
+</html>

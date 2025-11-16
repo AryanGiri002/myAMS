@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Class Students - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading students...</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            
+              href="/pages/teacher/teacher-dashboard.html"
+              class="text-gray-600 hover:text-cyan-600 transition"
+              >← Back</a
+            >
+            <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+            <span class="text-sm text-gray-500">Class Students</span>
+          </div>
+          <button
+            onclick="logout()"
+            class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Class Details Header -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+              <span id="subject-code"></span> - <span id="subject-name"></span>
+            </h2>
+            <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+              <span
+                >Branch: <strong id="class-branch" class="text-gray-900"></strong
+              ></span>
+              <span
+                >Semester: <strong id="class-semester" class="text-gray-900"></strong
+              ></span>
+              <span
+                >Section: <strong id="class-section" class="text-gray-900"></strong
+              ></span>
+            </div>
+          </div>
+          <div class="text-left md:text-right">
+            <p class="text-sm text-gray-500">Total Students</p>
+            <p id="total-students" class="text-3xl font-bold text-cyan-600">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg
+              class="w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search by name, PRN, or SRN..."
+            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+          />
+        </div>
+      </div>
+
+      <!-- Students Table -->
+      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6 border-b">
+          <h3 class="text-lg font-semibold">Student List</h3>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  #
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  PRN
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  SRN
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Name
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Branch
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Semester
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Section
+                </th>
+              </tr>
+            </thead>
+            <tbody id="students-table-body" class="bg-white divide-y divide-gray-200">
+              <!-- Students will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div id="students-cards" class="md:hidden p-4 space-y-4">
+          <!-- Student cards for mobile will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden p-12"></div>
+      </div>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let classSectionId = null;
+      let allStudents = [];
+      let filteredStudents = [];
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (user) {
+          checkRole(user, ['teacher', 'admin']);
+          const params = new URLSearchParams(window.location.search);
+          classSectionId = params.get('classSectionId');
+          
+          if (!classSectionId) {
+            showErrorToast('Class Section ID not found');
+            setTimeout(
+              () => (window.location.href = '/pages/teacher/teacher-dashboard.html'),
+              2000
+            );
+            return;
+          }
+          
+          await loadStudents();
+          setupSearch();
+        }
+      });
+
+      async function loadStudents() {
+        showLoading();
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/class-students/${classSectionId}`
+          );
+
+          hideLoading();
+
+          const classSection = data.data.classSection;
+          allStudents = data.data.students;
+          filteredStudents = [...allStudents];
+
+          // Update class details
+          document.getElementById('subject-code').textContent =
+            classSection.subject.subjectCode;
+          document.getElementById('subject-name').textContent =
+            classSection.subject.subjectName;
+          document.getElementById('class-branch').textContent =
+            classSection.branch;
+          document.getElementById('class-semester').textContent =
+            classSection.semester;
+          document.getElementById('class-section').textContent =
+            classSection.sectionName;
+
+          // Animate total count
+          animateNumber(
+            document.getElementById('total-students'),
+            data.data.totalStudents
+          );
+
+          // Display students
+          displayStudents(filteredStudents);
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      function displayStudents(students) {
+        const tableBody = document.getElementById('students-table-body');
+        const cardsContainer = document.getElementById('students-cards');
+        const emptyState = document.getElementById('empty-state');
+
+        if (students.length === 0) {
+          tableBody.innerHTML = '';
+          cardsContainer.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          handleEmptyState(
+            emptyState,
+            filteredStudents.length === 0 && allStudents.length > 0
+              ? 'No students match your search'
+              : 'No students enrolled in this class'
+          );
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        // Desktop table view
+        tableBody.innerHTML = students
+          .map(
+            (student, index) => `
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              ${index + 1}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-sm font-medium text-gray-900">${student.prn}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-sm font-medium text-gray-900">${student.srn}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="text-sm font-semibold text-gray-900">${student.name}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 text-xs font-medium rounded-full bg-cyan-100 text-cyan-800">
+                ${student.branch}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              ${student.semester}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              ${student.section}
+            </td>
+          </tr>
+        `
+          )
+          .join('');
+
+        // Mobile card view
+        cardsContainer.innerHTML = students
+          .map(
+            (student, index) => `
+          <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900 mb-1">${student.name}</p>
+                <div class="space-y-1 text-sm text-gray-600">
+                  <p><span class="font-medium">PRN:</span> ${student.prn}</p>
+                  <p><span class="font-medium">SRN:</span> ${student.srn}</p>
+                </div>
+              </div>
+              <span class="text-sm font-medium text-gray-500">#${index + 1}</span>
+            </div>
+            <div class="flex gap-2 text-xs">
+              <span class="px-2 py-1 bg-cyan-100 text-cyan-800 rounded-full font-medium">
+                ${student.branch}
+              </span>
+              <span class="px-2 py-1 bg-gray-200 text-gray-700 rounded-full font-medium">
+                Sem ${student.semester}
+              </span>
+              <span class="px-2 py-1 bg-gray-200 text-gray-700 rounded-full font-medium">
+                Sec ${student.section}
+              </span>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      function setupSearch() {
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener(
+          'input',
+          debounce((e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (!query) {
+              filteredStudents = [...allStudents];
+            } else {
+              filteredStudents = allStudents.filter(
+                (student) =>
+                  student.name.toLowerCase().includes(query) ||
+                  student.prn.toLowerCase().includes(query) ||
+                  student.srn.toLowerCase().includes(query)
+              );
+            }
+
+            displayStudents(filteredStudents);
+          }, 300)
+        );
+      }
+    </script>
+  </body>
+</html>

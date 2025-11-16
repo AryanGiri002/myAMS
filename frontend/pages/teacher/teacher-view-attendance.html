@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Attendance - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading attendance records...</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-4">
+            
+              href="/pages/teacher/teacher-dashboard.html"
+              class="text-gray-600 hover:text-cyan-600 transition"
+              >← Back</a
+            >
+            <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+            <span class="text-sm text-gray-500">View Attendance</span>
+          </div>
+          <button
+            onclick="logout()"
+            class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Filters -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Filter Records</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Class Section</label
+            >
+            <select
+              id="class-filter"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+            >
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Start Date</label
+            >
+            <input
+              type="date"
+              id="start-date"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >End Date</label
+            >
+            <input
+              type="date"
+              id="end-date"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+            />
+          </div>
+          <div class="flex items-end">
+            <div class="flex gap-2 w-full">
+              <button
+                onclick="applyFilters()"
+                class="flex-1 bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700 transition font-medium"
+              >
+                Apply
+              </button>
+              <button
+                onclick="resetFilters()"
+                class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition font-medium"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance Records -->
+      <div class="bg-white rounded-lg shadow-md">
+        <div class="p-6 border-b">
+          <h3 class="text-lg font-semibold">Attendance Records</h3>
+        </div>
+        <div id="records-container" class="p-6"></div>
+
+        <!-- Pagination -->
+        <div id="pagination-container"></div>
+      </div>
+    </div>
+
+    <script src="/js/constants.js"></script>
+    <script src="/js/utils.js"></script>
+    <script>
+      let currentPage = 1;
+      let currentFilters = {
+        classSectionId: '',
+        startDate: '',
+        endDate: '',
+      };
+      let allClasses = [];
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (user) {
+          checkRole(user, ['teacher', 'admin']);
+          
+          // Check if classSectionId is in URL
+          const params = new URLSearchParams(window.location.search);
+          const classSectionId = params.get('classSectionId');
+          
+          await loadClasses();
+          
+          if (classSectionId) {
+            document.getElementById('class-filter').value = classSectionId;
+            currentFilters.classSectionId = classSectionId;
+          }
+          
+          await loadAttendanceRecords();
+        }
+      });
+
+      async function loadClasses() {
+        try {
+          const data = await apiRequest(
+            `${API_CONFIG.BASE_URL}/teachers/classes`
+          );
+          allClasses = data.data.assignedClasses;
+
+          const select = document.getElementById('class-filter');
+          select.innerHTML =
+            '<option value="">All Classes</option>' +
+            allClasses
+              .map(
+                (cls) =>
+                  `<option value="${cls.classSectionId}">${cls.subject.subjectCode} - ${cls.branch} Sem${cls.semester} Sec${cls.sectionName}</option>`
+              )
+              .join('');
+        } catch (error) {
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      async function loadAttendanceRecords(page = 1) {
+        showLoading();
+        try {
+          let url = `${API_CONFIG.BASE_URL}/teachers/attendance?page=${page}&limit=10`;
+
+          if (currentFilters.classSectionId) {
+            url += `&classSectionId=${currentFilters.classSectionId}`;
+          }
+          if (currentFilters.startDate) {
+            url += `&startDate=${currentFilters.startDate}`;
+          }
+          if (currentFilters.endDate) {
+            url += `&endDate=${currentFilters.endDate}`;
+          }
+
+          const data = await apiRequest(url);
+          hideLoading();
+
+          currentPage = page;
+          displayRecords(data.data.records);
+
+          // Handle pagination
+          if (data.data.pagination && data.data.pagination.totalPages > 1) {
+            createPagination(
+              document.getElementById('pagination-container'),
+              data.data.pagination,
+              loadAttendanceRecords
+            );
+          } else {
+            document.getElementById('pagination-container').innerHTML = '';
+          }
+        } catch (error) {
+          hideLoading();
+          showErrorToast(getUserFriendlyError(error.message));
+        }
+      }
+
+      function displayRecords(records) {
+        const container = document.getElementById('records-container');
+
+        if (records.length === 0) {
+          handleEmptyState(
+            container,
+            'No attendance records found',
+            '<p class="text-sm text-gray-500 mt-2">Try adjusting your filters or mark new attendance.</p>'
+          );
+          return;
+        }
+
+        container.innerHTML = records
+          .map(
+            (record) => `
+          <div class="border border-gray-200 rounded-lg mb-4 overflow-hidden">
+            <!-- Record Header -->
+            <div class="bg-gray-50 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div class="flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                  <h4 class="font-semibold text-gray-900">${record.subject.subjectCode} - ${record.subject.subjectName}</h4>
+                  ${
+                    record.isFinalized
+                      ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">Finalized</span>'
+                      : '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Editable</span>'
+                  }
+                </div>
+                <div class="text-sm text-gray-600 space-y-1">
+                  <p><strong>Record ID:</strong> ${record.recordId}</p>
+                  <p><strong>Section:</strong> ${record.section.branch} Sem${record.section.semester} Sec${record.section.sectionName}</p>
+                  <p><strong>Date:</strong> ${record.date} | <strong>Time:</strong> ${record.startTime} - ${record.endTime}</p>
+                  <p><strong>Sessions:</strong> ${record.numSessions} | <strong>Students:</strong> ${record.totalStudents}</p>
+                  <p class="text-xs text-gray-500">Marked: ${record.markedAt}${record.lastModifiedAt ? ` | Modified: ${record.lastModifiedAt}` : ''}</p>
+                </div>
+              </div>
+              <div class="flex gap-2 flex-wrap">
+                <button
+                  onclick="toggleDetails('${record.recordId}')"
+                  class="px-4 py-2 bg-cyan-100 text-cyan-800 rounded-lg hover:bg-cyan-200 transition font-medium text-sm"
+                >
+                  View Details
+                </button>
+                ${
+                  !record.isFinalized
+                    ? `
+                  
+                    href="/pages/teacher/teacher-edit-attendance.html?recordId=${record.recordId}"
+                    class="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition font-medium text-sm"
+                  >
+                    Edit
+                  </a>
+                `
+                    : ''
+                }
+              </div>
+            </div>
+
+            <!-- Expandable Details -->
+            <div id="details-${record.recordId}" class="hidden p-4 border-t border-gray-200 bg-white">
+              <h5 class="font-semibold text-gray-900 mb-3">Student-wise Attendance</h5>
+              <div class="space-y-2 max-h-96 overflow-y-auto">
+                ${record.attendanceDetails
+                  .map(
+                    (detail) => `
+                  <div class="p-3 bg-gray-50 rounded-lg">
+                    <div class="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
+                      <div>
+                        <p class="font-medium text-gray-900">${detail.student.name}</p>
+                        <p class="text-sm text-gray-500">${detail.student.prn} | ${detail.student.srn}</p>
+                      </div>
+                      <div class="text-left sm:text-right">
+                        <p class="text-lg font-bold ${getAttendanceColorClass(detail.attendancePercentage).split(' ')[0]}">
+                          ${detail.attendancePercentage.toFixed(0)}%
+                        </p>
+                        <p class="text-xs text-gray-500">${detail.totalPresent}/${record.numSessions} present</p>
+                      </div>
+                    </div>
+                    <div class="flex gap-1 flex-wrap">
+                      ${detail.sessions
+                        .map(
+                          (session) => `
+                        <span class="px-2 py-1 rounded text-xs font-medium ${
+                          session.status === 'present'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }">
+                          ${session.status === 'present' ? '✓' : '✗'} S${session.sessionNumber}
+                        </span>
+                      `
+                        )
+                        .join('')}
+                    </div>
+                  </div>
+                `
+                  )
+                  .join('')}
+              </div>
+            </div>
+          </div>
+        `
+          )
+          .join('');
+      }
+
+      function toggleDetails(recordId) {
+        const detailsDiv = document.getElementById(`details-${recordId}`);
+        const button = event.target;
+
+        if (detailsDiv.classList.contains('hidden')) {
+          detailsDiv.classList.remove('hidden');
+          button.textContent = 'Hide Details';
+        } else {
+          detailsDiv.classList.add('hidden');
+          button.textContent = 'View Details';
+        }
+      }
+
+      function applyFilters() {
+        const classId = document.getElementById('class-filter').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        if (startDate && endDate && startDate > endDate) {
+          showWarningToast('Start date must be before end date');
+          return;
+        }
+
+        currentFilters.classSectionId = classId;
+        currentFilters.startDate = startDate
+          ? formatDateFromInput(startDate)
+          : '';
+        currentFilters.endDate = endDate ? formatDateFromInput(endDate) : '';
+
+        loadAttendanceRecords(1);
+      }
+
+      function resetFilters() {
+        document.getElementById('class-filter').value = '';
+        document.getElementById('start-date').value = '';
+        document.getElementById('end-date').value = '';
+
+        currentFilters = {
+          classSectionId: '',
+          startDate: '',
+          endDate: '',
+        };
+
+        loadAttendanceRecords(1);
+      }
+    </script>
+  </body>
+</html>

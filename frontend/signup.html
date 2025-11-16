@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up - AttendEase</title>
+    <link href="./src/output.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .password-strength-bar {
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .password-strength-fill {
+        height: 100%;
+        transition: all 0.3s;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Creating your account...</p>
+      </div>
+    </div>
+
+    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-cyan-600 mb-2">AttendEase</h1>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">
+            Create Your Account
+          </h2>
+          <p class="text-gray-600">
+            Join AttendEase to start tracking attendance
+          </p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+          <form id="signup-form" class="space-y-6">
+            <!-- Email -->
+            <div>
+              <label
+                for="email"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Email Address <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                required
+                placeholder="yourname@pesu.pes.edu"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+              />
+              <p class="text-xs text-gray-500 mt-1">
+                Must be a valid PESU email address
+              </p>
+              <p id="email-error" class="hidden text-red-500 text-sm mt-1"></p>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label
+                for="password"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Password <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="password"
+                  id="password"
+                  required
+                  placeholder="Create a strong password"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  id="toggle-password"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  <svg
+                    id="eye-icon-1"
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="mt-2 password-strength-bar">
+                <div
+                  id="password-strength-fill"
+                  class="password-strength-fill"
+                ></div>
+              </div>
+              <div id="password-requirements" class="mt-2 text-xs space-y-1">
+                <p class="text-gray-600 font-medium">Password must contain:</p>
+                <p id="req-length" class="text-gray-500">
+                  ✗ At least 8 characters
+                </p>
+                <p id="req-lower" class="text-gray-500">
+                  ✗ One lowercase letter
+                </p>
+                <p id="req-upper" class="text-gray-500">
+                  ✗ One uppercase letter
+                </p>
+                <p id="req-number" class="text-gray-500">✗ One number</p>
+              </div>
+              <p
+                id="password-error"
+                class="hidden text-red-500 text-sm mt-1"
+              ></p>
+            </div>
+
+            <!-- Confirm Password -->
+            <div>
+              <label
+                for="confirm-password"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Confirm Password <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="password"
+                  id="confirm-password"
+                  required
+                  placeholder="Re-enter your password"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  id="toggle-confirm-password"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  <svg
+                    id="eye-icon-2"
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <p
+                id="confirm-password-error"
+                class="hidden text-red-500 text-sm mt-1"
+              ></p>
+            </div>
+
+            <!-- Role Selection -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                I am a <span class="text-red-500">*</span>
+              </label>
+              <div class="grid grid-cols-2 gap-4">
+                <label class="relative cursor-pointer">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="student"
+                    class="peer sr-only"
+                    checked
+                  />
+                  <div
+                    class="border-2 border-gray-300 rounded-lg p-4 text-center transition peer-checked:border-cyan-500 peer-checked:bg-cyan-50"
+                  >
+                    <svg
+                      class="w-8 h-8 mx-auto mb-2 text-gray-600 peer-checked:text-cyan-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
+                    </svg>
+                    <p class="font-semibold">Student</p>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input
+                    type="radio"
+                    name="role"
+                    value="teacher"
+                    class="peer sr-only"
+                  />
+                  <div
+                    class="border-2 border-gray-300 rounded-lg p-4 text-center transition peer-checked:border-cyan-500 peer-checked:bg-cyan-50"
+                  >
+                    <svg
+                      class="w-8 h-8 mx-auto mb-2 text-gray-600 peer-checked:text-cyan-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                    <p class="font-semibold">Teacher</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Student Fields -->
+            <div id="student-fields" class="space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    for="prn"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    PRN <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="prn"
+                    placeholder="PES2202300055"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition uppercase"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">
+                    Format: PES2202300055
+                  </p>
+                  <p id="prn-error" class="hidden text-red-500 text-sm mt-1"></p>
+                </div>
+                <div>
+                  <label
+                    for="srn"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    SRN <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="srn"
+                    placeholder="PES2UG23CS068"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition uppercase"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">
+                    Format: PES2UG23CS068
+                  </p>
+                  <p id="srn-error" class="hidden text-red-500 text-sm mt-1"></p>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  for="student-name"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Full Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="student-name"
+                  placeholder="John Doe"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                />
+                <p
+                  id="student-name-error"
+                  class="hidden text-red-500 text-sm mt-1"
+                ></p>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label
+                    for="branch"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Branch <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="branch"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                  >
+                    <option value="">Select</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="Biotech">Biotech</option>
+                    <option value="Mech">Mech</option>
+                  </select>
+                  <p id="branch-error" class="hidden text-red-500 text-sm mt-1"></p>
+                </div>
+                <div>
+                  <label
+                    for="semester"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Semester <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="semester"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                  >
+                    <option value="">Select</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                  </select>
+                  <p
+                    id="semester-error"
+                    class="hidden text-red-500 text-sm mt-1"
+                  ></p>
+                </div>
+                <div>
+                  <label
+                    for="section"
+                    class="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Section <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="section"
+                    placeholder="A"
+                    maxlength="2"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition uppercase"
+                  />
+                  <p
+                    id="section-error"
+                    class="hidden text-red-500 text-sm mt-1"
+                  ></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Teacher Fields -->
+            <div id="teacher-fields" class="hidden space-y-6">
+              <div>
+                <label
+                  for="teacher-id"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Teacher ID <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="teacher-id"
+                  placeholder="TCH001"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition uppercase"
+                />
+                <p class="text-xs text-gray-500 mt-1">Format: TCH001</p>
+                <p
+                  id="teacher-id-error"
+                  class="hidden text-red-500 text-sm mt-1"
+                ></p>
+              </div>
+
+              <div>
+                <label
+                  for="teacher-name"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Full Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="teacher-name"
+                  placeholder="Dr. Jane Smith"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                />
+                <p
+                  id="teacher-name-error"
+                  class="hidden text-red-500 text-sm mt-1"
+                ></p>
+              </div>
+
+              <div>
+                <label
+                  for="department"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Department <span class="text-red-500">*</span>
+                </label>
+                <select
+                  id="department"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+                >
+                  <option value="">Select Department</option>
+                  <option value="CSE">CSE</option>
+                  <option value="ECE">ECE</option>
+                  <option value="Biotech">Biotech</option>
+                  <option value="Mech">Mech</option>
+                </select>
+                <p
+                  id="department-error"
+                  class="hidden text-red-500 text-sm mt-1"
+                ></p>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              class="w-full bg-cyan-600 text-white py-3 rounded-lg font-semibold hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 transition"
+            >
+              Create Account
+            </button>
+          </form>
+
+          <!-- Sign In Link -->
+          <p class="mt-6 text-center text-sm text-gray-600">
+            Already have an account?
+            <a
+              href="./login.html"
+              class="text-cyan-600 hover:text-cyan-700 font-medium"
+            >
+              Sign in
+            </a>
+          </p>
+        </div>
+
+        <!-- Back to Home -->
+        <div class="mt-4 text-center">
+          <a href="./index.html" class="text-sm text-gray-500 hover:text-gray-700">
+            ← Back to Home
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script src="./js/constants.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/signup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Enrollments - AttendEase</title>
+    <link href="../../src/output.css" rel="stylesheet" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"
+        ></div>
+        <p class="mt-4 text-gray-700">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      id="confirm-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h3 id="confirm-title" class="text-xl font-bold mb-4"></h3>
+        <p id="confirm-message" class="text-gray-700 mb-6"></p>
+        <div class="flex gap-3 justify-end">
+          <button
+            id="confirm-cancel"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            id="confirm-action"
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Enrollment Modal -->
+    <div
+      id="enrollment-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold text-gray-900">
+            Create New Enrollment
+          </h3>
+          <button
+            onclick="closeEnrollmentModal()"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form id="enrollment-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Student *
+            </label>
+            <select
+              id="student-id"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            >
+              <option value="">Select Student</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Class Section *
+            </label>
+            <select
+              id="class-section-id"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            >
+              <option value="">Select Class Section</option>
+            </select>
+          </div>
+
+          <div id="enrollment-info" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="text-sm font-semibold text-blue-900 mb-2">Enrollment Details</h4>
+            <div class="text-xs text-blue-800 space-y-1">
+              <p><span class="font-medium">Subject:</span> <span id="info-subject"></span></p>
+              <p><span class="font-medium">Teacher:</span> <span id="info-teacher"></span></p>
+              <p><span class="font-medium">Semester:</span> <span id="info-semester"></span></p>
+              <p><span class="font-medium">Academic Year:</span> <span id="info-year"></span></p>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button
+              type="button"
+              onclick="closeEnrollmentModal()"
+              class="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium transition"
+            >
+              Create Enrollment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bulk Enrollment Modal -->
+    <div
+      id="bulk-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+    >
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold text-gray-900">
+            Bulk Enroll Students
+          </h3>
+          <button
+            onclick="closeBulkModal()"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form id="bulk-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Class Section *
+            </label>
+            <select
+              id="bulk-section-id"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            >
+              <option value="">Select Class Section</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Select Students *
+            </label>
+            <div id="students-list" class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
+              <p class="text-sm text-gray-500">Select a section to view available students</p>
+            </div>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button
+              type="button"
+              onclick="closeBulkModal()"
+              class="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium transition"
+            >
+              Enroll Selected Students
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center gap-6">
+            <div class="flex items-center">
+              <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
+              <span class="ml-4 text-sm text-gray-500">Admin Portal</span>
+            </div>
+            <div class="hidden md:flex gap-4">
+              
+                href="admin-dashboard.html"
+                class="text-sm text-gray-600 hover:text-cyan-600 transition"
+              >
+                Dashboard
+              </a>
+              
+                href="admin-users.html"
+                class="text-sm text-gray-600 hover:text-cyan-600 transition"
+              >
+                Users
+              </a>
+              
+                href="admin-subjects.html"
+                class="text-sm text-gray-600 hover:text-cyan-600 transition"
+              >
+                Subjects
+              </a>
+              
+                href="admin-class-sections.html"
+                class="text-sm text-gray-600 hover:text-cyan-600 transition"
+              >
+                Sections
+              </a>
+              
+                href="admin-enrollments.html"
+                class="text-sm text-cyan-600 font-semibold"
+              >
+                Enrollments
+              </a>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <p id="user-name" class="text-sm font-semibold text-gray-900"></p>
+              <p id="user-role" class="text-xs text-gray-500"></p>
+            </div>
+            <button
+              onclick="logout()"
+              class="text-sm text-red-600 hover:text-red-700 font-medium transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-3xl font-bold text-gray-900">Manage Enrollments</h2>
+            <p class="text-gray-600 mt-1">
+              Enroll students in class sections
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <button
+              onclick="openBulkModal()"
+              class="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium shadow-md hover:shadow-lg transition"
+            >
+              Bulk Enroll
+            </button>
+            <button
+              onclick="openCreateModal()"
+              class="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium shadow-md hover:shadow-lg transition"
+            >
+              + Create Enrollment
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Enrollments</p>
+              <p id="total-enrollments" class="text-3xl font-bold text-gray-900 mt-2">0</p>
+            </div>
+            <div class="p-3 bg-cyan-100 rounded-lg">
+              <svg class="w-8 h-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Active Students</p>
+              <p id="active-students" class="text-3xl font-bold text-green-600 mt-2">0</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-lg">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Active Sections</p>
+              <p id="active-sections" class="text-3xl font-bold text-purple-600 mt-2">0</p>
+            </div>
+            <div class="p-3 bg-purple-100 rounded-lg">
+              <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Avg per Section</p>
+              <p id="avg-per-section" class="text-3xl font-bold text-yellow-600 mt-2">0</p>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-lg">
+              <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Search Student
+            </label>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search by student name..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Class Section
+            </label>
+            <select
+              id="section-filter"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            >
+              <option value="">All Sections</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Semester
+            </label>
+            <select
+              id="semester-filter"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            >
+              <option value="">All Semesters</option>
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3">Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5">Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button
+              onclick="applyFilters()"
+              class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition"
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrollments Table -->
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Student
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Section
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Subject
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Teacher
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Semester
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Enrolled On
+                </th>
+                <th
+                  class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody id="enrollments-table-body" class="bg-white divide-y divide-gray-200">
+              <!-- Enrollments will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-12">
+          <svg
+            class="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No enrollments found</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Get started by creating a new enrollment.
+          </p>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div
+        id="pagination"
+        class="hidden mt-6 flex items-center justify-between"
+      >
+        <div class="text-sm text-gray-700">
+          Showing <span id="showing-from" class="font-medium">1</span> to
+          <span id="showing-to" class="font-medium">10</span> of
+          <span id="total-count" class="font-medium">0</span> enrollments
+        </div>
+        <div class="flex gap-2">
+          <button
+            id="prev-page"
+            onclick="previousPage()"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <button
+            id="next-page"
+            onclick="nextPage()"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+      let allEnrollments = [];
+      let filteredEnrollments = [];
+      let allStudents = [];
+      let allSections = [];
+      let allSubjects = [];
+      let allTeachers = [];
+      let currentPage = 1;
+      const enrollmentsPerPage = 10;
+
+      // Initialize page
+      async function initializePage() {
+        checkAuth();
+        const user = getCurrentUser();
+        if (!user || user.role !== 'admin') {
+          showToast('Access denied. Admin privileges required.', 'error');
+          setTimeout(() => {
+            window.location.href = '/login.html';
+          }, 1500);
+          return;
+        }
+
+        document.getElementById('user-name').textContent = `${user.firstName} ${user.lastName}`;
+        document.getElementById('user-role').textContent = user.role.toUpperCase();
+
+        await Promise.all([
+          loadEnrollments(),
+          loadStudents(),
+          loadSections(),
+          loadSubjects(),
+          loadTeachers()
+        ]);
+
+        setupEventListeners();
+      }
+
+      // Load all enrollments
+      async function loadEnrollments() {
+        showLoading();
+        try {
+          const response = await apiRequest('/admin/enrollments', 'GET');
+          allEnrollments = response.enrollments || [];
+          filteredEnrollments = [...allEnrollments];
+          
+          updateStats();
+          renderEnrollments();
+          hideLoading();
+        } catch (error) {
+          hideLoading();
+          showToast(error.message || 'Failed to load enrollments', 'error');
+        }
+      }
+
+      // Load students
+      async function loadStudents() {
+        try {
+          const response = await apiRequest('/admin/users', 'GET');
+          allStudents = (response.users || []).filter(u => u.role === 'student');
+          populateStudentDropdown();
+        } catch (error) {
+          console.error('Failed to load students:', error);
+        }
+      }
+
+      // Load sections
+      async function loadSections() {
+        try {
+          const response = await apiRequest('/admin/class-sections', 'GET');
+          allSections = response.classSections || [];
+          populateSectionDropdowns();
+        } catch (error) {
+          console.error('Failed to load sections:', error);
+        }
+      }
+
+      // Load subjects
+      async function loadSubjects() {
+        try {
+          const response = await apiRequest('/admin/subjects', 'GET');
+          allSubjects = response.subjects || [];
+        } catch (error) {
+          console.error('Failed to load subjects:', error);
+        }
+      }
+
+      // Load teachers
+      async function loadTeachers() {
+        try {
+          const response = await apiRequest('/admin/users', 'GET');
+          allTeachers = (response.users || []).filter(u => u.role === 'teacher');
+        } catch (error) {
+          console.error('Failed to load teachers:', error);
+        }
+      }
+
+      // Populate student dropdown
+      function populateStudentDropdown() {
+        const select = document.getElementById('student-id');
+        select.innerHTML = '<option value="">Select Student</option>';
+        
+        allStudents.forEach(student => {
+          const option = document.createElement('option');
+          option.value = student._id;
+          option.textContent = `${student.firstName} ${student.lastName} (${student.srn})`;
+          select.appendChild(option);
+        });
+      }
+
+      // Populate section dropdowns
+      function populateSectionDropdowns() {
+        const selects = [
+          document.getElementById('class-section-id'),
+          document.getElementById('section-filter'),
+          document.getElementById('bulk-section-id')
+        ];
+        
+        selects.forEach((select, index) => {
+          const firstOption = index === 1 ? 'All Sections' : 'Select Class Section';
+          select.innerHTML = `<option value="">${firstOption}</option>`;
+          
+          allSections.forEach(section => {
+            const subject = allSubjects.find(s => s._id === section.subjectId);
+            const subjectName = subject ? subject.subjectCode : 'Unknown';
+            
+            const option = document.createElement('option');
+            option.value = section._id;
+            option.textContent = `${section.sectionName} - ${subjectName} (Sem ${section.semester})`;
+            select.appendChild(option);
+          });
+        });
+      }
+
+      // Setup event listeners
+      function setupEventListeners() {
+        // Show enrollment info when section is selected
+        document.getElementById('class-section-id').addEventListener('change', function() {
+          const sectionId = this.value;
+          if (sectionId) {
+            showEnrollmentInfo(sectionId);
+          } else {
+            document.getElementById('enrollment-info').classList.add('hidden');
+          }
+        });
+
+        // Load students for bulk enrollment when section is selected
+        document.getElementById('bulk-section-id').addEventListener('change', function() {
+          const sectionId = this.value;
+          if (sectionId) {
+            loadAvailableStudents(sectionId);
+          } else {
+            document.getElementById('students-list').innerHTML = 
+              '<p class="text-sm text-gray-500">Select a section to view available students</p>';
+          }
+        });
+      }
+
+      // Show enrollment info
+      function showEnrollmentInfo(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        if (!section) return;
+
+        const subject = allSubjects.find(s => s._id === section.subjectId);
+        const teacher = allTeachers.find(t => t._id === section.teacherId);
+
+        document.getElementById('info-subject').textContent = subject ? 
+          `${subject.subjectCode} - ${subject.subjectName}` : 'Unknown';
+        document.getElementById('info-teacher').textContent = teacher ? 
+          `${teacher.firstName} ${teacher.lastName}` : 'Unknown';
+        document.getElementById('info-semester').textContent = section.semester;
+        document.getElementById('info-year').textContent = section.academicYear;
+
+        document.getElementById('enrollment-info').classList.remove('hidden');
+      }
+
+      // Load available students for bulk enrollment
+      function loadAvailableStudents(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        if (!section) return;
+
+        // Get students already enrolled in this section
+        const enrolledStudentIds = allEnrollments
+          .filter(e => e.classSectionId === sectionId)
+          .map(e => e.studentId);
+
+        // Filter students by semester and not already enrolled
+        const availableStudents = allStudents.filter(student => 
+          student.semester === section.semester && 
+          !enrolledStudentIds.includes(student._id)
+        );
+
+        const container = document.getElementById('students-list');
+        
+        if (availableStudents.length === 0) {
+          container.innerHTML = '<p class="text-sm text-gray-500">No available students for this section</p>';
+          return;
+        }
+
+        container.innerHTML = availableStudents.map(student => `
+          <div class="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="student-${student._id}"
+              value="${student._id}"
+              class="bulk-student-checkbox w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+            />
+            <label for="student-${student._id}" class="ml-2 text-sm text-gray-900">
+              ${student.firstName} ${student.lastName} (${student.srn})
+            </label>
+          </div>
+        `).join('');
+      }
+
+      // Update stats
+      function updateStats() {
+        const totalEnrollments = allEnrollments.length;
+        const uniqueStudents = new Set(allEnrollments.map(e => e.studentId)).size;
+        const uniqueSections = new Set(allEnrollments.map(e => e.classSectionId)).size;
+        const avgPerSection = uniqueSections > 0 
+          ? Math.round(totalEnrollments / uniqueSections)
+          : 0;
+
+        document.getElementById('total-enrollments').textContent = totalEnrollments;
+        document.getElementById('active-students').textContent = uniqueStudents;
+        document.getElementById('active-sections').textContent = uniqueSections;
+        document.getElementById('avg-per-section').textContent = avgPerSection;
+      }
+
+      // Get student name
+      function getStudentName(studentId) {
+        const student = allStudents.find(s => s._id === studentId);
+        return student ? `${student.firstName} ${student.lastName}` : 'Unknown';
+      }
+
+      // Get student SRN
+      function getStudentSRN(studentId) {
+        const student = allStudents.find(s => s._id === studentId);
+        return student ? student.srn : '';
+      }
+
+      // Get section name
+      function getSectionName(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        return section ? section.sectionName : 'Unknown';
+      }
+
+      // Get subject name
+      function getSubjectName(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        if (!section) return 'Unknown';
+        
+        const subject = allSubjects.find(s => s._id === section.subjectId);
+        return subject ? `${subject.subjectCode} - ${subject.subjectName}` : 'Unknown';
+      }
+
+      // Get teacher name
+      function getTeacherName(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        if (!section) return 'Unknown';
+        
+        const teacher = allTeachers.find(t => t._id === section.teacherId);
+        return teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown';
+      }
+
+      // Get semester
+      function getSemester(sectionId) {
+        const section = allSections.find(s => s._id === sectionId);
+        return section ? section.semester : '';
+      }
+
+      // Format date
+      function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+      }
+
+      // Render enrollments table
+      function renderEnrollments() {
+        const tbody = document.getElementById('enrollments-table-body');
+        const emptyState = document.getElementById('empty-state');
+        const pagination = document.getElementById('pagination');
+
+        if (filteredEnrollments.length === 0) {
+          tbody.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          pagination.classList.add('hidden');
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        pagination.classList.remove('hidden');
+
+        const startIndex = (currentPage - 1) * enrollmentsPerPage;
+        const endIndex = startIndex + enrollmentsPerPage;
+        const enrollmentsToShow = filteredEnrollments.slice(startIndex, endIndex);
+
+        tbody.innerHTML = enrollmentsToShow
+          .map(
+            (enrollment) => `
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900">${getStudentName(enrollment.studentId)}</div>
+              <div class="text-xs text-gray-500">${getStudentSRN(enrollment.studentId)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-semibold text-cyan-600">${getSectionName(enrollment.classSectionId)}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-gray-900">${getSubjectName(enrollment.classSectionId)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-900">${getTeacherName(enrollment.classSectionId)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                Sem ${getSemester(enrollment.classSectionId)}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-500">${formatDate(enrollment.enrollmentDate)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <button
+                onclick="deleteEnrollment('${enrollment._id}', '${getStudentName(enrollment.studentId)}', '${getSectionName(enrollment.classSectionId)}')"
+                class="text-red-600 hover:text-red-900"
+              >
+                Remove
+              </button>
+            </td>
+          </tr>
+        `
+          )
+          .join('');
+
+        // Update pagination info
+        document.getElementById('showing-from').textContent = startIndex + 1;
+        document.getElementById('showing-to').textContent = Math.min(
+          endIndex,
+          filteredEnrollments.length
+        );
+        document.getElementById('total-count').textContent = filteredEnrollments.length;
+
+        // Update pagination buttons
+        document.getElementById('prev-page').disabled = currentPage === 1;
+        document.getElementById('next-page').disabled =
+          endIndex >= filteredEnrollments.length;
+      }
+
+      // Open create modal
+      function openCreateModal() {
+        document.getElementById('enrollment-form').reset();
+        document.getElementById('enrollment-info').classList.add('hidden');
+        document.getElementById('enrollment-modal').classList.remove('hidden');
+      }
+
+      // Close enrollment modal
+      function closeEnrollmentModal() {
+        document.getElementById('enrollment-modal').classList.add('hidden');
+      }
+
+      // Open bulk modal
+      function openBulkModal() {
+        document.getElementById('bulk-form').reset();
+        document.getElementById('students-list').innerHTML = 
+          '<p class="text-sm text-gray-500">Select a section to view available students</p>';
+        document.getElementById('bulk-modal').classList.remove('hidden');
+      }
+
+      // Close bulk modal
+      function closeBulkModal() {
+        document.getElementById('bulk-modal').classList.add('hidden');
+      }
+
+      // Handle enrollment form submit
+      document.getElementById('enrollment-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const enrollmentData = {
+          studentId: document.getElementById('student-id').value,
+          classSectionId: document.getElementById('class-section-id').value,
+        };
+
+        showLoading();
+        try {
+          await apiRequest('/admin/enrollments', 'POST', enrollmentData);
+          showToast('Enrollment created successfully', 'success');
+          closeEnrollmentModal();
+          await loadEnrollments();
+        } catch (error) {
+          hideLoading();
+          showToast(error.message || 'Failed to create enrollment', 'error');
+        }
+      });
+
+      // Handle bulk enrollment form submit
+      document.getElementById('bulk-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const sectionId = document.getElementById('bulk-section-id').value;
+        const checkboxes = document.querySelectorAll('.bulk-student-checkbox:checked');
+        const studentIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (studentIds.length === 0) {
+          showToast('Please select at least one student', 'error');
+          return;
+        }
+
+        showLoading();
+        try {
+          await apiRequest('/admin/enrollments/bulk', 'POST', {
+            classSectionId: sectionId,
+            studentIds: studentIds
+          });
+          showToast(`Successfully enrolled ${studentIds.length} student(s)`, 'success');
+          closeBulkModal();
+          await loadEnrollments();
+        } catch (error) {
+          hideLoading();
+          showToast(error.message || 'Failed to create bulk enrollments', 'error');
+        }
+      });
+
+      // Delete enrollment
+      function deleteEnrollment(enrollmentId, studentName, sectionName) {
+        showConfirmModal(
+          'Remove Enrollment',
+          `Are you sure you want to remove ${studentName} from ${sectionName}?`,
+          async () => {
+            showLoading();
+            try {
+              await apiRequest(`/admin/enrollments/${enrollmentId}`, 'DELETE');
+              showToast('Enrollment removed successfully', 'success');
+              await loadEnrollments();
+            } catch (error) {
+              hideLoading();
+              showToast(error.message || 'Failed to remove enrollment', 'error');
+            }
+          }
+        );
+      }
+
+      // Apply filters
+      function applyFilters() {
+        const searchTerm = document
+          .getElementById('search-input')
+          .value.toLowerCase();
+        const sectionFilter = document.getElementById('section-filter').value;
+        const semesterFilter = document.getElementById('semester-filter').value;
+
+        filteredEnrollments = allEnrollments.filter((enrollment) => {
+          const studentName = getStudentName(enrollment.studentId).toLowerCase();
+          const matchesSearch = studentName.includes(searchTerm);
+          const matchesSection = !sectionFilter || enrollment.classSectionId === sectionFilter;
+          const matchesSemester = !semesterFilter || getSemester(enrollment.classSectionId) == semesterFilter;
+
+          return matchesSearch && matchesSection && matchesSemester;
+        });
+
+        currentPage = 1;
+        renderEnrollments();
+      }
+
+      // Pagination
+      function previousPage() {
+        if (currentPage > 1) {
+          currentPage--;
+          renderEnrollments();
+        }
+      }
+
+      function nextPage() {
+        if (currentPage * enrollmentsPerPage < filteredEnrollments.length) {
+          currentPage++;
+          renderEnrollments();
+        }
+      }
+
+      // Initialize when page loads
+      document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+  </body>
+</html>
