@@ -533,29 +533,25 @@
       async function loadUsers() {
         showLoading();
         try {
-          console.log(
-            'Calling admin users API:',
-            `${API_CONFIG.BASE_URL}/admin/users`
-          );
           const response = await apiRequest(
             `${API_CONFIG.BASE_URL}/admin/users`,
             { method: 'GET' }
           );
-          console.log('Admin users API raw response:', response);
 
-          // Assuming backend uses sendSuccess: { success, statusCode, message, data: { users: [...] } }
-          allUsers = response.data?.users || [];
-          console.log('Parsed allUsers:', allUsers);
+          // Real shape: { success, statusCode, message, data: { users, pagination } }
+          const { users, pagination } = response.data;
 
+          allUsers = users || [];
           filteredUsers = [...allUsers];
+
           renderUsers();
           hideLoading();
         } catch (error) {
           hideLoading();
-          console.error('Failed to load users:', error);
           showToast(error.message || 'Failed to load users', 'error');
         }
       }
+
 
       // Render users table
       function renderUsers() {
@@ -578,55 +574,62 @@
         const usersToShow = filteredUsers.slice(startIndex, endIndex);
 
         tbody.innerHTML = usersToShow
-          .map(
-            (user) => `
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">
-                ${(user.firstName || '')} ${(user.lastName || '')}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-600">${user.email || ''}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
-                user.role
-              )}">
-                ${user.role
-                  ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-                  : ''}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              ${getUserDetails(user)}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                user.isActive
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }">
-                ${user.isActive ? 'Active' : 'Inactive'}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button
-                onclick="editUser('${user._id}')"
-                class="text-cyan-600 hover:text-cyan-900 mr-3"
-              >
-                Edit
-              </button>
-              <button
-                onclick="deleteUser('${user._id}', '${(user.firstName || '')} ${(user.lastName || '')}')"
-                class="text-red-600 hover:text-red-900"
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        `
-          )
+          .map((user) => {
+            // Name comes from profile.name if available; fall back to email
+            const displayName =
+              user.profile && user.profile.name
+                ? user.profile.name
+                : user.email;
+
+            return `
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    ${displayName}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    ${user.email}
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-600">${user.email}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                    user.role
+                  )}">
+                    ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  ${getUserDetails(user)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    user.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }">
+                    ${user.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onclick="editUser('${user.userId}')"
+                    class="text-cyan-600 hover:text-cyan-900 mr-3"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onclick="deleteUser('${user.userId}', '${displayName}')"
+                    class="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            `;
+          })
           .join('');
 
         // Update pagination info
@@ -635,14 +638,13 @@
           endIndex,
           filteredUsers.length
         );
-        document.getElementById('total-users').textContent =
-          filteredUsers.length;
+        document.getElementById('total-users').textContent = filteredUsers.length;
 
         // Update pagination buttons
         document.getElementById('prev-page').disabled = currentPage === 1;
-        document.getElementById('next-page').disabled =
-          endIndex >= filteredUsers.length;
+        document.getElementById('next-page').disabled = endIndex >= filteredUsers.length;
       }
+
 
       // Get role badge color
       function getRoleBadgeColor(role) {
@@ -659,18 +661,35 @@
       }
 
       // Get user details based on role
-      function getUserDetails(user) {
-        if (user.role === 'student') {
-          return `SRN: ${user.srn || 'N/A'}<br>Sem: ${
-            user.semester || 'N/A'
-          }, Branch: ${user.branch || 'N/A'}`;
-        } else if (user.role === 'teacher') {
-          return `Emp ID: ${user.employeeId || 'N/A'}<br>Dept: ${
-            user.department || 'N/A'
-          }`;
-        }
-        return 'Admin User';
-      }
+function getUserDetails(user) {
+  const profile = user.profile;
+
+  if (!profile) {
+    if (user.role === 'admin') {
+      return 'Admin user (no profile record)';
+    }
+    return 'No profile linked';
+  }
+
+  if (user.role === 'student') {
+    return `
+      PRN: ${profile.prn || 'N/A'}<br>
+      SRN: ${profile.srn || 'N/A'}<br>
+      Sem: ${profile.semester || 'N/A'}, Branch: ${profile.branch || 'N/A'}, Section: ${profile.section || 'N/A'}
+    `;
+  }
+
+  if (user.role === 'teacher') {
+    return `
+      Name: ${profile.name || 'N/A'}<br>
+      Emp ID: ${profile.teacherId || 'N/A'}<br>
+      Dept: ${profile.department || 'N/A'}
+    `;
+  }
+
+  return 'Admin user';
+}
+
 
       // Setup event listeners
       function setupEventListeners() {
