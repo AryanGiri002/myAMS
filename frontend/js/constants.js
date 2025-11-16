@@ -16,11 +16,11 @@ const APP_ROUTES = {
   TEACHER_VIEW_ATTENDANCE: '/pages/teacher/teacher-view-attendance.html',
   TEACHER_EDIT_ATTENDANCE: '/pages/teacher/teacher-edit-attendance.html',
   TEACHER_CLASS_STUDENTS: '/pages/teacher/teacher-class-students.html',
-  ADMIN_DASHBOARD: '/pages/admin-dashboard.html',
-  ADMIN_USERS: '/pages/admin-users.html',
-  ADMIN_SUBJECTS: '/pages/admin-subjects.html',
-  ADMIN_CLASS_SECTIONS: '/pages/admin-class-sections.html',
-  ADMIN_ENROLLMENTS: '/pages/admin-enrollments.html',
+  ADMIN_DASHBOARD: '/pages/admin/admin-dashboard.html',
+  ADMIN_USERS: '/pages/admin/admin-users.html',
+  ADMIN_SUBJECTS: '/pages/admin/admin-subjects.html',
+  ADMIN_CLASS_SECTIONS: '/pages/admin/admin-class-sections.html',
+  ADMIN_ENROLLMENTS: '/pages/admin/admin-enrollments.html',
 };
 
 // Validation Patterns
