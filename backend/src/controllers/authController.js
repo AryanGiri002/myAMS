@@ -1,7 +1,12 @@
 import crypto from 'crypto';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess, sendError } from '../utils/responseFormatter.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, getTokenExpiryDate } from '../utils/tokenUtils.js';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  getTokenExpiryDate,
+} from '../utils/tokenUtils.js';
 import { validatePassword } from '../utils/validators.js';
 import { HTTP_STATUS, USER_ROLES } from '../config/constants.js';
 import User from '../models/User.model.js';
@@ -12,17 +17,17 @@ import Teacher from '../models/Teacher.model.js';
  * ============================================================================
  * AUTHENTICATION CONTROLLER
  * ============================================================================
- * 
+ *
  * Handles all authentication-related operations using cookie-based JWT tokens.
  * All tokens are stored in httpOnly cookies for maximum security (XSS protection).
- * 
+ *
  * ENDPOINTS:
  * 1. POST /api/auth/signup   - Register new user (student/teacher)
  * 2. POST /api/auth/login    - Authenticate user and set cookies
  * 3. POST /api/auth/logout   - Clear cookies and invalidate refresh token
  * 4. POST /api/auth/refresh  - Get new access token using refresh token
  * 5. GET  /api/auth/me       - Get current logged-in user's profile
- * 
+ *
  * SECURITY FEATURES:
  * - Passwords hashed with bcrypt (pre-save hook in User model)
  * - JWT tokens with separate secrets for access/refresh
@@ -34,22 +39,22 @@ import Teacher from '../models/Teacher.model.js';
 
 /**
  * SIGNUP - Register a new user (student or teacher)
- * 
+ *
  * Creates a User account and associated Student/Teacher profile.
  * Password is automatically hashed by User model's pre-save hook.
  * Does NOT automatically log in user (they must login after signup).
- * 
+ *
  * Route: POST /api/auth/signup
  * Access: Public (no authentication required)
  * Rate Limit: 5 requests per 15 minutes (authLimiter)
- * 
+ *
  * @param {Object} req.body - Signup data
  * @param {String} req.body.email - University email (@pesu.pes.edu)
  * @param {String} req.body.password - Plain text password (will be hashed)
  * @param {String} req.body.confirmPassword - Password confirmation
  * @param {String} req.body.role - User role (student/teacher)
  * @param {Object} req.body.roleSpecificData - Student or Teacher specific data
- * 
+ *
  * @example
  * // Student signup:
  * POST /api/auth/signup
@@ -87,7 +92,10 @@ export const signup = asyncHandler(async (req, res) => {
       res,
       HTTP_STATUS.BAD_REQUEST,
       'Password does not meet requirements (authController.js)',
-      passwordValidation.errors.map((err) => ({ field: 'password', message: err }))
+      passwordValidation.errors.map(err => ({
+        field: 'password',
+        message: err,
+      }))
     );
   }
 
@@ -129,7 +137,8 @@ export const signup = asyncHandler(async (req, res) => {
   // Create role-specific profile
   if (role === USER_ROLES.STUDENT) {
     // Validate student-specific data
-    const { prn, srn, name, branch, currentSemester, section } = roleSpecificData;
+    const { prn, srn, name, branch, currentSemester, section } =
+      roleSpecificData;
 
     if (!prn || !srn || !name || !branch || !currentSemester || !section) {
       // Rollback: Delete user if student creation fails
@@ -211,34 +220,39 @@ export const signup = asyncHandler(async (req, res) => {
 
 /**
  * LOGIN - Authenticate user and set httpOnly cookies
- * 
+ *
  * Verifies credentials, generates tokens, stores refresh token in database,
  * and sets both tokens as httpOnly cookies in the response.
- * 
+ *
  * Route: POST /api/auth/login
  * Access: Public (no authentication required)
  * Rate Limit: 5 requests per 15 minutes (authLimiter)
- * 
+ *
  * @param {Object} req.body - Login credentials
  * @param {String} req.body.email - University email
  * @param {String} req.body.password - Plain text password
- * 
+ *
  * @example
  * POST /api/auth/login
  * {
  *   "email": "student@pesu.pes.edu",
  *   "password": "SecurePass123"
  * }
- * 
+ *
  * Response sets cookies:
  * - accessToken (httpOnly, 1 day expiry)
  * - refreshToken (httpOnly, 7 days expiry)
  */
 export const login = asyncHandler(async (req, res) => {
+  console.log('===== LOGIN ATTEMPT =====');
+  console.log('Incoming cookies:', req.cookies);
+  console.log('Incoming body:', req.body);
+
   const { email, password } = req.body;
 
   // Validate input
   if (!email || !password) {
+    console.log('Login failed: Missing email or password');
     return sendError(
       res,
       HTTP_STATUS.BAD_REQUEST,
@@ -246,10 +260,14 @@ export const login = asyncHandler(async (req, res) => {
     );
   }
 
-  // Find user and include password field (normally excluded by select: false)
+  console.log('Looking up user with email:', email);
+
+  // Find user
   const user = await User.findOne({ email }).select('+password');
+  console.log('User lookup result:', user ? 'FOUND' : 'NOT FOUND');
 
   if (!user) {
+    console.log('Login failed: No user found with this email');
     return sendError(
       res,
       HTTP_STATUS.UNAUTHORIZED,
@@ -258,7 +276,9 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // Check if account is active
+  console.log('User active status:', user.isActive);
   if (!user.isActive) {
+    console.log('Login failed: User account is deactivated');
     return sendError(
       res,
       HTTP_STATUS.FORBIDDEN,
@@ -266,10 +286,13 @@ export const login = asyncHandler(async (req, res) => {
     );
   }
 
-  // Verify password using User model's comparePassword method
+  // Verify password
+  console.log('Checking password...');
   const isPasswordValid = await user.comparePassword(password);
+  console.log('Password match:', isPasswordValid);
 
   if (!isPasswordValid) {
+    console.log('Login failed: Incorrect password');
     return sendError(
       res,
       HTTP_STATUS.UNAUTHORIZED,
@@ -277,113 +300,133 @@ export const login = asyncHandler(async (req, res) => {
     );
   }
 
-  // Generate access token (1 day expiry)
+  console.log('Password correct. Generating tokens...');
+
+  // Generate access + refresh tokens
   const accessToken = generateAccessToken({
     userId: user._id,
     role: user.role,
   });
 
-  // Generate refresh token (7 days expiry)
   const refreshToken = generateRefreshToken({
     userId: user._id,
-    tokenId: crypto.randomUUID(), // Unique ID for this token
+    tokenId: crypto.randomUUID(),
   });
 
-  // Calculate refresh token expiry date
-  const refreshTokenExpiry = getTokenExpiryDate(process.env.JWT_REFRESH_EXPIRY || '7d');
+  console.log('Tokens generated:', {
+    accessTokenPresent: !!accessToken,
+    refreshTokenPresent: !!refreshToken,
+  });
 
-  // Save refresh token in database (for revocation capability)
-  user.addRefreshToken(refreshToken, refreshTokenExpiry);  //Device to be added
+  const refreshTokenExpiry = getTokenExpiryDate(
+    process.env.JWT_REFRESH_EXPIRY || '7d'
+  );
+
+  // Save refresh token
+  console.log('Storing refresh token in DB...');
+  user.addRefreshToken(refreshToken, refreshTokenExpiry);
   user.lastLogin = new Date();
   await user.save();
+  console.log('Refresh token saved. Last login updated.');
 
-  // Fetch role-specific profile data
+  // Fetch role profile
+  console.log('Fetching role-specific profile for role:', user.role);
+
   let profile = null;
 
   if (user.role === USER_ROLES.STUDENT) {
+    console.log('Fetching student profile...');
     const student = await Student.findOne({ userId: user._id }).populate(
       'enrolledSubjects.subjectId',
       'subjectCode subjectName credits'
     );
-
-    if (student) {
-      profile = {
-        studentId: student._id,
-        prn: student.prn,
-        srn: student.srn,
-        name: student.name,
-        branch: student.branch,
-        semester: student.currentSemester,
-        section: student.section,
-        enrolledSubjects: student.enrolledSubjects.map((enrollment) => ({
-          subjectId: enrollment.subjectId._id,
-          subjectCode: enrollment.subjectId.subjectCode,
-          subjectName: enrollment.subjectId.subjectName,
-          credits: enrollment.subjectId.credits,
-          semesterNumber: enrollment.semesterNumber,
-        })),
-      };
-    }
-  } else if (user.role === USER_ROLES.TEACHER) {
-    const teacher = await Teacher.findOne({ userId: user._id });
-
-    if (teacher) {
-      profile = {
-        teacherId: teacher.teacherId,
-        name: teacher.name,
-        department: teacher.department,
-      };
-    }
-  } else if (user.role === USER_ROLES.ADMIN) {
-    profile = {
-      name: 'Administrator',
-    };
+    profile = student
+      ? {
+          studentId: student._id,
+          prn: student.prn,
+          srn: student.srn,
+          name: student.name,
+          branch: student.branch,
+          semester: student.currentSemester,
+          section: student.section,
+          enrolledSubjects: student.enrolledSubjects.map(e => ({
+            subjectId: e.subjectId._id,
+            subjectCode: e.subjectId.subjectCode,
+            subjectName: e.subjectId.subjectName,
+            credits: e.subjectId.credits,
+            semesterNumber: e.semesterNumber,
+          })),
+        }
+      : null;
   }
 
-  // Set tokens as httpOnly cookies
-  const cookieOptions = {
-    httpOnly: true, // Cannot be accessed by JavaScript (XSS protection)
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'strict', // CSRF protection
-    maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
-  };
+  if (user.role === USER_ROLES.TEACHER) {
+    console.log('Fetching teacher profile...');
+    const teacher = await Teacher.findOne({ userId: user._id });
+    profile = teacher
+      ? {
+          teacherId: teacher.teacherId,
+          name: teacher.name,
+          department: teacher.department,
+        }
+      : null;
+  }
 
-  const refreshCookieOptions = {
+  if (user.role === USER_ROLES.ADMIN) {
+    console.log('Admin login — no extra profile needed.');
+    profile = { name: 'Administrator' };
+  }
+
+  // Set cookies
+  console.log('Setting cookies...');
+
+  res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-  };
-
-  // Set cookies in response
-  res.cookie('accessToken', accessToken, cookieOptions);
-  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
-
-  // Send response (tokens are in cookies, user data in body)
-  return sendSuccess(res, HTTP_STATUS.OK, 'Login successful (authController.js)', {
-    user: {
-      userId: user._id,
-      email: user.email,
-      role: user.role,
-      lastLogin: user.lastLogin,
-      profile,
-    },
+    maxAge: 24 * 60 * 60 * 1000,
   });
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  console.log('Cookies set successfully');
+  console.log('===== LOGIN SUCCESS =====');
+
+  // Send response
+  return sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    'Login successful (authController.js)',
+    {
+      user: {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+        lastLogin: user.lastLogin,
+        profile,
+      },
+    }
+  );
 });
 
 /**
  * LOGOUT - Clear cookies and invalidate refresh token
- * 
+ *
  * Removes refresh token from database and clears both cookies.
  * User must login again to get new tokens.
- * 
+ *
  * Route: POST /api/auth/logout
  * Access: Private (requires authentication)
  * Middleware: authenticate
- * 
+ *
  * @param {Object} req.user - User info from authenticate middleware
  * @param {Object} req.cookies - Cookies from request
- * 
+ *
  * @example
  * POST /api/auth/logout
  * Cookies: accessToken, refreshToken (sent automatically by browser)
@@ -412,25 +455,29 @@ export const logout = asyncHandler(async (req, res) => {
   res.clearCookie('accessToken', cookieOptions);
   res.clearCookie('refreshToken', cookieOptions);
 
-  return sendSuccess(res, HTTP_STATUS.OK, 'Logged out successfully (authController.js)');
+  return sendSuccess(
+    res,
+    HTTP_STATUS.OK,
+    'Logged out successfully (authController.js)'
+  );
 });
 
 /**
  * REFRESH - Get new access token using refresh token
- * 
+ *
  * Verifies refresh token, checks if it exists in database,
  * generates new access token, and updates cookie.
- * 
+ *
  * Route: POST /api/auth/refresh
  * Access: Public (no authentication required, but needs refresh token)
- * 
+ *
  * @param {Object} req.cookies - Cookies from request
  * @param {String} req.cookies.refreshToken - Refresh token from cookie
- * 
+ *
  * @example
  * POST /api/auth/refresh
  * Cookies: refreshToken (sent automatically by browser)
- * 
+ *
  * Response sets new accessToken cookie
  */
 export const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -486,7 +533,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
   // Check if refresh token exists in user's refreshTokens array
   const tokenExists = user.refreshTokens.some(
-    (rt) => rt.token === refreshToken && new Date(rt.expiresAt) > new Date()
+    rt => rt.token === refreshToken && new Date(rt.expiresAt) > new Date()
   );
 
   if (!tokenExists) {
@@ -530,16 +577,16 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
 /**
  * GET CURRENT USER - Get logged-in user's profile
- * 
+ *
  * Returns complete user information including role-specific profile.
  * Used by frontend to check if user is still logged in after page refresh.
- * 
+ *
  * Route: GET /api/auth/me
  * Access: Private (requires authentication)
  * Middleware: authenticate
- * 
+ *
  * @param {Object} req.user - User info from authenticate middleware
- * 
+ *
  * @example
  * GET /api/auth/me
  * Cookies: accessToken (sent automatically by browser)
@@ -574,7 +621,7 @@ export const getProfile = asyncHandler(async (req, res) => {
         branch: student.branch,
         semester: student.currentSemester,
         section: student.section,
-        enrolledSubjects: student.enrolledSubjects.map((enrollment) => ({
+        enrolledSubjects: student.enrolledSubjects.map(enrollment => ({
           subjectId: enrollment.subjectId._id,
           subjectCode: enrollment.subjectId.subjectCode,
           subjectName: enrollment.subjectId.subjectName,
@@ -594,7 +641,7 @@ export const getProfile = asyncHandler(async (req, res) => {
         teacherId: teacher.teacherId,
         name: teacher.name,
         department: teacher.department,
-        assignedSubjects: teacher.assignedSubjects.map((assignment) => ({
+        assignedSubjects: teacher.assignedSubjects.map(assignment => ({
           subjectId: assignment.subjectId._id,
           subjectCode: assignment.subjectId.subjectCode,
           subjectName: assignment.subjectId.subjectName,
