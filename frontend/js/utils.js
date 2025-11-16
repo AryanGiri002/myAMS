@@ -81,12 +81,6 @@ async function checkAuth() {
       return null;
     }
 
-    // if (!response.ok) {
-    //   console.log("checkAuth FAILED. Status:", response.status);
-    //   console.log("NO REDIRECT (debug mode). Returning null.");
-    //   return null;
-    // }
-
     const data = await response.json();
     return data.data.user;
   } catch (error) {
