@@ -853,17 +853,13 @@ export const getAssignedClasses = asyncHandler(async (req, res) => {
 
 /**
  * GET STUDENTS IN A CLASS SECTION
- * 
- * Retrieves list of students enrolled in a specific class section.
+ * * Retrieves list of students enrolled in a specific class section.
  * Useful when teacher needs to see who should be present for attendance marking.
- * 
- * Route: GET /api/teachers/class-students/:classSectionId
+ * * Route: GET /api/teachers/class-students/:classSectionId
  * Access: Private (Teacher/Admin only)
  * Middleware: authenticate, teacherOrAdmin
- * 
- * @param {String} req.params.classSectionId - MongoDB ObjectId of class section
- * 
- * @example
+ * * @param {String} req.params.classSectionId - MongoDB ObjectId of class section
+ * * @example
  * GET /api/teachers/class-students/64cls001...
  */
 export const getClassStudents = asyncHandler(async (req, res) => {
@@ -880,10 +876,18 @@ export const getClassStudents = asyncHandler(async (req, res) => {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // [FIX #1] - This is the corrected .populate() query
+  // ═══════════════════════════════════════════════════════════════
   // Find class section
   const classSection = await ClassSection.findById(classSectionId)
     .populate('subjectId', 'subjectCode subjectName')
-    .populate('students', 'prn srn name branch currentSemester section');
+    .populate({
+      path: 'students.studentId', // <-- Populate the 'studentId' field *inside* the 'students' array
+      model: 'Student',
+      select: 'prn srn name branch currentSemester section', // <-- Select all the fields you need
+    });
+  // ═══════════════════════════════════════════════════════════════
 
   if (!classSection) {
     return sendError(
@@ -902,16 +906,23 @@ export const getClassStudents = asyncHandler(async (req, res) => {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // [FIX #2] - This is the corrected .map() function
+  // ═══════════════════════════════════════════════════════════════
   // Format student list
-  const students = classSection.students.map((student) => ({
-    studentId: student.studentId,
-    prn: student.prn,
-    srn: student.srn,
-    name: student.name,
-    branch: student.branch,
-    semester: student.currentSemester,
-    section: student.section,
-  }));
+  const students = classSection.students
+    .filter(s => s.status === 'active') // Only return active students in the roster
+    .map((studentObj) => ({
+      // 'studentObj' is { studentId: { ...populated_doc... }, status: 'active', ... }
+      studentId: studentObj.studentId._id,
+      prn: studentObj.studentId.prn,
+      srn: studentObj.studentId.srn,
+      name: studentObj.studentId.name,
+      branch: studentObj.studentId.branch,
+      semester: studentObj.studentId.currentSemester,
+      section: studentObj.studentId.section,
+    }));
+  // ═══════════════════════════════════════════════════════════════
 
   return sendSuccess(
     res,
@@ -928,8 +939,8 @@ export const getClassStudents = asyncHandler(async (req, res) => {
         semester: classSection.semester,
         branch: classSection.branch,
       },
-      students,
-      totalStudents: students.length,
+      students, // <-- This is now the correctly formatted array
+      totalStudents: students.length, // <-- This is the count of *active* students
     }
   );
 });
