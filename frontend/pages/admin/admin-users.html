@@ -59,7 +59,9 @@
       id="user-modal"
       class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
     >
-      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+      >
         <div class="flex justify-between items-center mb-6">
           <h3 id="modal-title" class="text-2xl font-bold text-gray-900">
             Create New User
@@ -298,8 +300,14 @@
           </div>
           <div class="flex items-center gap-4">
             <div class="text-right">
-              <p id="user-name" class="text-sm font-semibold text-gray-900"></p>
-              <p id="user-role" class="text-xs text-gray-500"></p>
+              <p
+                id="user-name"
+                class="text-sm font-semibold text-gray-900"
+              ></p>
+              <p
+                id="user-role"
+                class="text-xs text-gray-500"
+              ></p>
             </div>
             <button
               onclick="logout()"
@@ -423,7 +431,10 @@
                 </th>
               </tr>
             </thead>
-            <tbody id="users-table-body" class="bg-white divide-y divide-gray-200">
+            <tbody
+              id="users-table-body"
+              class="bg-white divide-y divide-gray-200"
+            >
               <!-- Users will be loaded here -->
             </tbody>
           </table>
@@ -480,10 +491,12 @@
       </div>
     </div>
 
-    <script src="/js/utils.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
+    <!-- Scripts -->
+    <script src="../../js/constants.js"></script>
+    <script src="../../js/utils.js"></script>
     <script>
+      console.log('Admin Users page script loaded');
+
       let allUsers = [];
       let filteredUsers = [];
       let currentPage = 1;
@@ -491,18 +504,26 @@
 
       // Initialize page
       async function initializePage() {
-        checkAuth();
-        const user = getCurrentUser();
-        if (!user || user.role !== 'admin') {
-          showToast('Access denied. Admin privileges required.', 'error');
-          setTimeout(() => {
-            window.location.href = '/login.html';
-          }, 1500);
+        console.log('initializePage() called');
+
+        const currentUser = await checkAuth();
+        console.log('Current user from checkAuth:', currentUser);
+
+        if (!currentUser) {
+          console.log('No currentUser, returning');
           return;
         }
 
-        document.getElementById('user-name').textContent = `${user.firstName} ${user.lastName}`;
-        document.getElementById('user-role').textContent = user.role.toUpperCase();
+        if (currentUser.role !== 'admin') {
+          console.log('Non-admin user, redirecting via checkRole');
+          checkRole(currentUser, ['admin']);
+          return;
+        }
+
+        document.getElementById('user-name').textContent =
+          currentUser.profile?.name || currentUser.email;
+        document.getElementById('user-role').textContent =
+          currentUser.role.toUpperCase();
 
         await loadUsers();
         setupEventListeners();
@@ -512,13 +533,26 @@
       async function loadUsers() {
         showLoading();
         try {
-          const response = await apiRequest('/admin/users', 'GET');
-          allUsers = response.users || [];
+          console.log(
+            'Calling admin users API:',
+            `${API_CONFIG.BASE_URL}/admin/users`
+          );
+          const response = await apiRequest(
+            `${API_CONFIG.BASE_URL}/admin/users`,
+            { method: 'GET' }
+          );
+          console.log('Admin users API raw response:', response);
+
+          // Assuming backend uses sendSuccess: { success, statusCode, message, data: { users: [...] } }
+          allUsers = response.data?.users || [];
+          console.log('Parsed allUsers:', allUsers);
+
           filteredUsers = [...allUsers];
           renderUsers();
           hideLoading();
         } catch (error) {
           hideLoading();
+          console.error('Failed to load users:', error);
           showToast(error.message || 'Failed to load users', 'error');
         }
       }
@@ -549,22 +583,30 @@
           <tr class="hover:bg-gray-50">
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm font-medium text-gray-900">
-                ${user.firstName} ${user.lastName}
+                ${(user.firstName || '')} ${(user.lastName || '')}
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-600">${user.email}</div>
+              <div class="text-sm text-gray-600">${user.email || ''}</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}">
-                ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                user.role
+              )}">
+                ${user.role
+                  ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+                  : ''}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
               ${getUserDetails(user)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+              <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                user.isActive
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }">
                 ${user.isActive ? 'Active' : 'Inactive'}
               </span>
             </td>
@@ -576,7 +618,7 @@
                 Edit
               </button>
               <button
-                onclick="deleteUser('${user._id}', '${user.firstName} ${user.lastName}')"
+                onclick="deleteUser('${user._id}', '${(user.firstName || '')} ${(user.lastName || '')}')"
                 class="text-red-600 hover:text-red-900"
               >
                 Delete
@@ -593,7 +635,8 @@
           endIndex,
           filteredUsers.length
         );
-        document.getElementById('total-users').textContent = filteredUsers.length;
+        document.getElementById('total-users').textContent =
+          filteredUsers.length;
 
         // Update pagination buttons
         document.getElementById('prev-page').disabled = currentPage === 1;
@@ -618,58 +661,66 @@
       // Get user details based on role
       function getUserDetails(user) {
         if (user.role === 'student') {
-          return `SRN: ${user.srn || 'N/A'}<br>Sem: ${user.semester || 'N/A'}, Branch: ${user.branch || 'N/A'}`;
+          return `SRN: ${user.srn || 'N/A'}<br>Sem: ${
+            user.semester || 'N/A'
+          }, Branch: ${user.branch || 'N/A'}`;
         } else if (user.role === 'teacher') {
-          return `Emp ID: ${user.employeeId || 'N/A'}<br>Dept: ${user.department || 'N/A'}`;
+          return `Emp ID: ${user.employeeId || 'N/A'}<br>Dept: ${
+            user.department || 'N/A'
+          }`;
         }
         return 'Admin User';
       }
 
       // Setup event listeners
       function setupEventListeners() {
-        document.getElementById('role').addEventListener('change', function () {
-          const role = this.value;
-          const studentFields = document.getElementById('student-fields');
-          const teacherFields = document.getElementById('teacher-fields');
-          const passwordField = document.getElementById('password-field');
-          const passwordInput = document.getElementById('password');
+        document
+          .getElementById('role')
+          .addEventListener('change', function () {
+            const role = this.value;
+            const studentFields = document.getElementById('student-fields');
+            const teacherFields = document.getElementById('teacher-fields');
+            const passwordInput = document.getElementById('password');
 
-          studentFields.classList.add('hidden');
-          teacherFields.classList.add('hidden');
+            studentFields.classList.add('hidden');
+            teacherFields.classList.add('hidden');
 
-          if (role === 'student') {
-            studentFields.classList.remove('hidden');
-            document.getElementById('srn').required = true;
-            document.getElementById('semester').required = true;
-            document.getElementById('branch').required = true;
-            document.getElementById('employee-id').required = false;
-            document.getElementById('department').required = false;
-          } else if (role === 'teacher') {
-            teacherFields.classList.remove('hidden');
-            document.getElementById('employee-id').required = true;
-            document.getElementById('department').required = true;
-            document.getElementById('srn').required = false;
-            document.getElementById('semester').required = false;
-            document.getElementById('branch').required = false;
-          } else {
-            document.getElementById('srn').required = false;
-            document.getElementById('semester').required = false;
-            document.getElementById('branch').required = false;
-            document.getElementById('employee-id').required = false;
-            document.getElementById('department').required = false;
-          }
+            if (role === 'student') {
+              studentFields.classList.remove('hidden');
+              document.getElementById('srn').required = true;
+              document.getElementById('semester').required = true;
+              document.getElementById('branch').required = true;
+              document.getElementById('employee-id').required = false;
+              document.getElementById('department').required = false;
+            } else if (role === 'teacher') {
+              teacherFields.classList.remove('hidden');
+              document.getElementById('employee-id').required = true;
+              document.getElementById('department').required = true;
+              document.getElementById('srn').required = false;
+              document.getElementById('semester').required = false;
+              document.getElementById('branch').required = false;
+            } else {
+              document.getElementById('srn').required = false;
+              document.getElementById('semester').required = false;
+              document.getElementById('branch').required = false;
+              document.getElementById('employee-id').required = false;
+              document.getElementById('department').required = false;
+            }
 
-          // Password is required for new users
-          const editUserId = document.getElementById('edit-user-id').value;
-          passwordInput.required = !editUserId;
-        });
+            const editUserId =
+              document.getElementById('edit-user-id').value;
+            passwordInput.required = !editUserId;
+          });
 
-        document.getElementById('user-form').addEventListener('submit', handleFormSubmit);
+        document
+          .getElementById('user-form')
+          .addEventListener('submit', handleFormSubmit);
       }
 
       // Open create modal
       function openCreateModal() {
-        document.getElementById('modal-title').textContent = 'Create New User';
+        document.getElementById('modal-title').textContent =
+          'Create New User';
         document.getElementById('user-form').reset();
         document.getElementById('edit-user-id').value = '';
         document.getElementById('password').required = true;
@@ -691,26 +742,33 @@
 
         document.getElementById('modal-title').textContent = 'Edit User';
         document.getElementById('edit-user-id').value = user._id;
-        document.getElementById('first-name').value = user.firstName;
-        document.getElementById('last-name').value = user.lastName;
-        document.getElementById('email').value = user.email;
-        document.getElementById('role').value = user.role;
+        document.getElementById('first-name').value =
+          user.firstName || '';
+        document.getElementById('last-name').value = user.lastName || '';
+        document.getElementById('email').value = user.email || '';
+        document.getElementById('role').value = user.role || '';
 
         // Password not required for edit
         document.getElementById('password').required = false;
         document.getElementById('password').value = '';
         document.getElementById('password-field').classList.add('hidden');
 
-        // Show role-specific fields
         if (user.role === 'student') {
-          document.getElementById('student-fields').classList.remove('hidden');
+          document.getElementById('student-fields').classList.remove(
+            'hidden'
+          );
           document.getElementById('srn').value = user.srn || '';
-          document.getElementById('semester').value = user.semester || '';
+          document.getElementById('semester').value =
+            user.semester || '';
           document.getElementById('branch').value = user.branch || '';
         } else if (user.role === 'teacher') {
-          document.getElementById('teacher-fields').classList.remove('hidden');
-          document.getElementById('employee-id').value = user.employeeId || '';
-          document.getElementById('department').value = user.department || '';
+          document.getElementById('teacher-fields').classList.remove(
+            'hidden'
+          );
+          document.getElementById('employee-id').value =
+            user.employeeId || '';
+          document.getElementById('department').value =
+            user.department || '';
         }
 
         document.getElementById('user-modal').classList.remove('hidden');
@@ -730,31 +788,41 @@
           role: role,
         };
 
-        // Add password if creating new user or if password field is filled
         const password = document.getElementById('password').value;
         if (password) {
           userData.password = password;
         }
 
-        // Add role-specific fields
         if (role === 'student') {
           userData.srn = document.getElementById('srn').value;
-          userData.semester = parseInt(document.getElementById('semester').value);
+          userData.semester = parseInt(
+            document.getElementById('semester').value,
+            10
+          );
           userData.branch = document.getElementById('branch').value;
         } else if (role === 'teacher') {
-          userData.employeeId = document.getElementById('employee-id').value;
-          userData.department = document.getElementById('department').value;
+          userData.employeeId =
+            document.getElementById('employee-id').value;
+          userData.department =
+            document.getElementById('department').value;
         }
 
         showLoading();
         try {
           if (editUserId) {
-            // Update user
-            await apiRequest(`/admin/users/${editUserId}`, 'PUT', userData);
+            await apiRequest(
+              `${API_CONFIG.BASE_URL}/admin/users/${editUserId}`,
+              {
+                method: 'PUT',
+                body: JSON.stringify(userData),
+              }
+            );
             showToast('User updated successfully', 'success');
           } else {
-            // Create user
-            await apiRequest('/admin/users', 'POST', userData);
+            await apiRequest(`${API_CONFIG.BASE_URL}/admin/users`, {
+              method: 'POST',
+              body: JSON.stringify(userData),
+            });
             showToast('User created successfully', 'success');
           }
 
@@ -762,7 +830,11 @@
           await loadUsers();
         } catch (error) {
           hideLoading();
-          showToast(error.message || 'Failed to save user', 'error');
+          console.error('Failed to save user:', error);
+          showToast(
+            error.message || 'Failed to save user',
+            'error'
+          );
         }
       }
 
@@ -774,12 +846,19 @@
           async () => {
             showLoading();
             try {
-              await apiRequest(`/admin/users/${userId}`, 'DELETE');
+              await apiRequest(
+                `${API_CONFIG.BASE_URL}/admin/users/${userId}`,
+                { method: 'DELETE' }
+              );
               showToast('User deleted successfully', 'success');
               await loadUsers();
             } catch (error) {
               hideLoading();
-              showToast(error.message || 'Failed to delete user', 'error');
+              console.error('Failed to delete user:', error);
+              showToast(
+                error.message || 'Failed to delete user',
+                'error'
+              );
             }
           }
         );
@@ -794,29 +873,33 @@
         const sortBy = document.getElementById('sort-by').value;
 
         filteredUsers = allUsers.filter((user) => {
+          const name =
+            `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+          const email = (user.email || '').toLowerCase();
+
           const matchesSearch =
-            user.firstName.toLowerCase().includes(searchTerm) ||
-            user.lastName.toLowerCase().includes(searchTerm) ||
-            user.email.toLowerCase().includes(searchTerm);
+            name.includes(searchTerm) || email.includes(searchTerm);
 
           const matchesRole = !roleFilter || user.role === roleFilter;
 
           return matchesSearch && matchesRole;
         });
 
-        // Sort
         filteredUsers.sort((a, b) => {
           switch (sortBy) {
             case 'name':
-              return `${a.firstName} ${a.lastName}`.localeCompare(
-                `${b.firstName} ${b.lastName}`
+              return `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(
+                `${b.firstName || ''} ${b.lastName || ''}`
               );
             case 'email':
-              return a.email.localeCompare(b.email);
+              return (a.email || '').localeCompare(b.email || '');
             case 'role':
-              return a.role.localeCompare(b.role);
+              return (a.role || '').localeCompare(b.role || '');
             case 'created':
-              return new Date(b.createdAt) - new Date(a.createdAt);
+              return (
+                new Date(b.createdAt || 0) -
+                new Date(a.createdAt || 0)
+              );
             default:
               return 0;
           }
