@@ -34,11 +34,11 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center gap-4">
-            
+            <a
               href="/pages/teacher/teacher-dashboard.html"
               class="text-gray-600 hover:text-cyan-600 transition"
-              >← Back</a
-            >
+            > ← Back
+            </a>
             <h1 class="text-xl font-bold text-cyan-600">AttendEase</h1>
             <span class="text-sm text-gray-500">View Attendance</span>
           </div>
@@ -254,7 +254,7 @@
                 ${
                   !record.isFinalized
                     ? `
-                  
+                  <a
                     href="/pages/teacher/teacher-edit-attendance.html?recordId=${record.recordId}"
                     class="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition font-medium text-sm"
                   >
