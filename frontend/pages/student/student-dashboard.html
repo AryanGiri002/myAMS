@@ -102,63 +102,127 @@
       </div>
     </div>
 
-    <script src="/js/constants.js"></script>
-    <script src="/js/utils.js"></script>
+    <script src="../../js/constants.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/constants.js"></script>
+
     <script>
+      console.log("=== Student Dashboard Loaded ===");
+
+      console.log("API_CONFIG:", API_CONFIG);
+      console.log("checkAuth exists?", typeof checkAuth);
+      console.log("apiRequest exists?", typeof apiRequest);
+
       let currentUser = null;
 
-      // Initialize page
-      document.addEventListener('DOMContentLoaded', async () => {
-        currentUser = await checkAuth();
-        if (currentUser) {
-          checkRole(currentUser, ['student', 'admin']);
-          initializePage();
+      // Debug wrapper around checkAuth
+      async function debugCheckAuth() {
+        console.log("Calling checkAuth()...");
+        try {
+          const url = `${API_CONFIG.BASE_URL}/auth/profile`;
+          console.log("Profile URL:", url);
+
+          const res = await fetch(url, { credentials: "include" });
+          console.log("Profile Response:", res.status);
+
+          if (!res.ok) {
+            console.log("Profile request FAILED, redirecting to LOGIN");
+            return null;
+          }
+
+          const data = await res.json();
+          console.log("Profile payload:", data);
+
+          return data.data.user;
+        } catch (err) {
+          console.log("checkAuth ERROR:", err);
+          return null;
         }
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        console.log("DOMContentLoaded fired");
+
+        currentUser = await debugCheckAuth();
+
+        console.log("currentUser result:", currentUser);
+
+        if (!currentUser) {
+          console.log("User is NULL → redirecting...");
+          window.location.href = APP_ROUTES.LOGIN;
+          return;
+        }
+
+        console.log("User authenticated. Role:", currentUser.role);
+
+        checkRole(currentUser, ["student", "admin"]);
+
+        console.log("Initializing page...");
+        initializePage();
       });
 
       async function initializePage() {
-        // Set user info in header
-        document.getElementById('user-name').textContent =
-          currentUser.profile.name;
-        document.getElementById('user-role').textContent =
-          currentUser.role.toUpperCase();
+        console.log("initializePage() START");
 
-        // Set profile data
-        document.getElementById('welcome-message').textContent =
-          `Welcome back, ${currentUser.profile.name}!`;
-        document.getElementById('profile-prn').textContent =
-          currentUser.profile.prn;
-        document.getElementById('profile-srn').textContent =
-          currentUser.profile.srn;
-        document.getElementById('profile-branch').textContent =
-          currentUser.profile.branch;
-        document.getElementById('profile-semester').textContent =
-          `Semester ${currentUser.profile.semester}`;
+        try {
+          console.log("Setting user name:", currentUser.profile.name);
+          document.getElementById("user-name").textContent =
+            currentUser.profile.name;
 
-        // Load dashboard data
-        await loadDashboard();
+          document.getElementById("user-role").textContent =
+            currentUser.role.toUpperCase();
+
+          document.getElementById("welcome-message").textContent =
+            `Welcome back, ${currentUser.profile.name}!`;
+
+          document.getElementById("profile-prn").textContent =
+            currentUser.profile.prn;
+          document.getElementById("profile-srn").textContent =
+            currentUser.profile.srn;
+          document.getElementById("profile-branch").textContent =
+            currentUser.profile.branch;
+          document.getElementById("profile-semester").textContent =
+            `Semester ${currentUser.profile.semester}`;
+
+          console.log("Calling loadDashboard()");
+          await loadDashboard();
+          console.log("loadDashboard() complete");
+        } catch (err) {
+          console.log("initializePage ERROR:", err);
+        }
       }
 
       async function loadDashboard() {
+        console.log("loadDashboard START");
+
         showLoading();
+
         try {
-          const data = await apiRequest(
-            `${API_CONFIG.BASE_URL}/students/attendance/dashboard`
-          );
+          const url = `${API_CONFIG.BASE_URL}/students/attendance/dashboard`;
+          console.log("Dashboard URL:", url);
+
+          const data = await apiRequest(url);
+
+          console.log("Dashboard API Response:", data);
 
           hideLoading();
 
           const student = data.data.student;
-          const container = document.getElementById('subjects-container');
+          const container = document.getElementById("subjects-container");
 
-          if (student.enrolledSubjects.length === 0) {
+          console.log("Student data:", student);
+
+          if (!student.enrolledSubjects.length) {
+            console.log("No subjects found");
             handleEmptyState(
               container,
-              'No enrolled subjects found',
-              '<p class="text-sm text-gray-500 mt-2">Please contact your administrator to enroll in subjects.</p>'
+              "No enrolled subjects found",
+              '<p class="text-sm text-gray-500 mt-2">Please contact admin.</p>'
             );
             return;
           }
+
+          console.log("Rendering subjects...");
 
           container.innerHTML = student.enrolledSubjects
             .map(
@@ -178,7 +242,7 @@
               <div class="text-sm text-gray-500 mb-4">
                 <p>Semester: ${subject.semesterNumber}</p>
               </div>
-              
+              <a
                 href="/pages/student/student-attendance.html?subjectId=${subject.subjectId}"
                 class="block w-full text-center bg-cyan-600 text-white py-2 rounded-lg hover:bg-cyan-700 transition font-medium"
               >
@@ -187,8 +251,9 @@
             </div>
           `
             )
-            .join('');
+            .join("");
         } catch (error) {
+          console.log("loadDashboard ERROR:", error);
           hideLoading();
           showErrorToast(getUserFriendlyError(error.message));
         }
